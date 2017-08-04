@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ORBIS">
+      <Configuration>Debug</Configuration>
+      <Platform>ORBIS</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ORBIS">
+      <Configuration>Release</Configuration>
+      <Platform>ORBIS</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{3F83F990-44F8-4AB1-9C0A-0310550D2C17}</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ORBIS'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ORBIS'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|ORBIS'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|ORBIS'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ORBIS'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ORBIS'" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ORBIS'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions);</PreprocessorDefinitions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalIncludeDirectories>$(SIMUL)/..;$(SCE_ORBIS_SAMPLE_DIR)\sample_code\graphics\api_gnm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OptimizationLevel>Level0</OptimizationLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>$(SCE_ORBIS_SDK_DIR)/target/lib/libScePad_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceDbg_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libScePm4Dump.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceGnm_debug.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceVideoOut_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceGnmDriver_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceGnf.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceGnmx_debug.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceGpuAddress.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceShaderBinary.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libScePerf_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libScePosix_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/samples/sample_code/graphics/api_gnm/toolkit/toolkit_debug.a;$(SCE_ORBIS_SDK_DIR)/target/samples/sample_code/graphics/api_gnm/framework/framework_debug.a;$(SCE_ORBIS_SDK_DIR)/target/samples/sample_code/graphics/api_gnm/dbg_font/libSceDbgFont_debug.a</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ORBIS'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions);</PreprocessorDefinitions>
+      <OptimizationLevel>Level0</OptimizationLevel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalIncludeDirectories>$(SIMUL)/..;$(SCE_ORBIS_SAMPLE_DIR)\sample_code\graphics\api_gnm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>$(SCE_ORBIS_SDK_DIR)/target/lib/libScePad_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceDbg_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libScePm4Dump.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceGnm.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceVideoOut_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceGnmDriver_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceGnf.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceGnmx.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceGpuAddress.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libSceShaderBinary.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libScePerf_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/lib/libScePosix_stub_weak.a;$(SCE_ORBIS_SDK_DIR)/target/samples/sample_code/graphics/api_gnm/toolkit/toolkit.a;$(SCE_ORBIS_SDK_DIR)/target/samples/sample_code/graphics/api_gnm/framework/framework.a;$(SCE_ORBIS_SDK_DIR)/target/samples/sample_code/graphics/api_gnm/dbg_font/libSceDbgFont.a</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CrossPlatform\CrossPlatform_PS4_VC11.vcxproj">
+      <Project>{2ae4f994-2857-4e92-930a-b3aae8409fb4}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Base\Base_PS4.vcxproj">
+      <Project>{9dd830a5-2d20-4e32-89a8-32cd62ce30bd}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Clouds\Clouds_PS4.vcxproj">
+      <Project>{8cf9d8eb-3ae3-4232-b44d-c9fd45607c2a}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Geometry\Geometry_PS4.vcxproj">
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Math\Math_PS4.vcxproj">
+      <Project>{756e9f36-05d1-4e6b-9ae9-9ab555de7c06}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Meta\Meta_PS4.vcxproj">
+      <Project>{5de72f15-d51c-42e5-b648-77ff539e1dc9}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Render\Render.vcxproj">
+      <Project>{a444586d-0c72-4314-b1c6-91d910c8c3b1}</Project>
+      <Private>true</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Sky\Sky_PS4.vcxproj">
+      <Project>{9736cb4f-eef1-4054-b379-e31f736ced3d}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp" />
+  </ItemGroup>
+  <Import Condition="'$(ConfigurationType)' == 'Makefile' and Exists('$(VCTargetsPath)\Platforms\$(Platform)\SCE.Makefile.$(Platform).targets')" Project="$(VCTargetsPath)\Platforms\$(Platform)\SCE.Makefile.$(Platform).targets" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

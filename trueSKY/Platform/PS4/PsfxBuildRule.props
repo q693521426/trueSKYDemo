@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup
+    Condition="'$(PsfxBeforeTargets)' == '' and '$(PsfxAfterTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <PsfxBeforeTargets>Midl</PsfxBeforeTargets>
+    <PsfxAfterTargets>CustomBuild</PsfxAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PsfxDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(PsfxDependsOn)</PsfxDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Psfx>
+      <SfxConfig></SfxConfig>
+      <IncludePaths>defaultincludepath</IncludePaths>
+      <CommandLineTemplate>Sfx.exe [inputs] [IncludePaths] [OutputPath] [SfxConfig]</CommandLineTemplate>
+      <Outputs>%(Filename).psfxo</Outputs>
+    </Psfx>
+  </ItemDefinitionGroup>
+</Project>
