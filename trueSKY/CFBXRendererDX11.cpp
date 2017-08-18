@@ -49,9 +49,8 @@ HRESULT CFBXRenderDX11::LoadFBX(const char* filename, ID3D11Device*	pd3dDevice, 
 		return E_FAIL;
 
 	HRESULT hr = S_OK;
-
 	m_pFBX = new CFBXLoader;
-	hr = m_pFBX->LoadFBX(filename, CFBXLoader::eAXIS_OPENGL);
+	hr = m_pFBX->LoadFBX(filename,CFBXLoader::eAXIS_DIRECTX);
 	if(FAILED(hr))
 		return hr;
 
@@ -356,14 +355,15 @@ HRESULT CFBXRenderDX11::MaterialConstruction(ID3D11Device*	pd3dDevice,FBX_MESH_N
 			std::string path = it->second[0];
 
 			// June 2010ÇÃéûÇ©ÇÁïœçX
-			hr = D3DX11CreateShaderResourceViewFromFileA( pd3dDevice,"seafloor.dds", NULL, NULL, &meshNode.materialData.pSRV, NULL );
+			//hr = D3DX11CreateShaderResourceViewFromFileA( pd3dDevice,"../Media/Misc/seafloor.dds", NULL, NULL, &meshNode.materialData.pSRV, NULL );
+			hr = D3DX11CreateShaderResourceViewFromFileA(pd3dDevice,path.c_str(), NULL, NULL, &meshNode.materialData.pSRV, NULL);
 
 			// Todo: åàÇﬂë≈ÇøÇÊÇ≠Ç»Ç¢ÇØÇ«ébíËëŒâû
 			// FBXÇÃSDKÇæÇ∆ï∂éöóÒÇÕcharÇ»ÇÒÇæÇØÇ«ÅAÇ±Ç¡ÇøÇ≈ÇÕwcharÇ…ÇµÇ»Ç¢Ç∆Ç¢ÇØÇ»Ç¢...
 			//WCHAR	wstr[512];
 			//size_t wLen = 0;
 			//mbstowcs_s( &wLen, wstr, path.size()+1, path.c_str(), _TRUNCATE);
-			//CreateDDSTextureFromFile( pd3dDevice, wstr, NULL, &meshNode.materialData.pSRV, 0 );	// DXTexÇ©ÇÁ
+			//CreateDDSTextureFromFile( pd3dDevice, L"misc\\seafloor.dds", NULL, &meshNode.materialData.pSRV, 0 );	// DXTexÇ©ÇÁ
 		}
 	}
 
@@ -449,14 +449,14 @@ HRESULT CFBXRenderDX11::RenderNode( ID3D11DeviceContext* pImmediateContext, cons
 {
 	size_t nodeCount = m_meshNodeArray.size();
 	if(nodeCount==0 || nodeCount<=nodeId)
-		return S_OK;
+		return S_FALSE;
 
 	HRESULT hr = S_OK;
 	
 	MESH_NODE* node = &m_meshNodeArray[nodeId];
 
 	if(node->vertexCount==0)
-		return S_OK;
+		return S_FALSE;
 
 	UINT stride = sizeof( VERTEX_DATA );
 	UINT offset = 0;

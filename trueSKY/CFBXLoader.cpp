@@ -74,21 +74,24 @@ HRESULT CFBXLoader::LoadFBX(const char* filename, const eAXIS_SYSTEM axis)
 		OurAxisSystem = FbxAxisSystem::OpenGL;
 		
 	// DirectX系
-    FbxAxisSystem SceneAxisSystem = mScene->GetGlobalSettings().GetAxisSystem();
+    /*FbxAxisSystem SceneAxisSystem = mScene->GetGlobalSettings().GetAxisSystem();
 	if(SceneAxisSystem != OurAxisSystem)
 	{
 		FbxAxisSystem::DirectX.ConvertScene(mScene);
 	}
 
-    // 単位系の統一
-	// 不要でもいいかも
+	SceneAxisSystem = mScene->GetGlobalSettings().GetAxisSystem();*/
+ // 
     FbxSystemUnit SceneSystemUnit = mScene->GetGlobalSettings().GetSystemUnit();
     if( SceneSystemUnit.GetScaleFactor() != 1.0 )
     {
         // センチメーター単位にコンバートする
         FbxSystemUnit::cm.ConvertScene( mScene );
     }
-
+	else
+	{
+		FbxSystemUnit::m.ConvertScene(mScene);
+	}
 	// 三角形化(三角形以外のデータでもコレで安心)
 	TriangulateRecursive(mScene->GetRootNode());
 
@@ -372,6 +375,7 @@ void CFBXLoader::ComputeNodeMatrix(FbxNode* pNode, FBX_MESH_NODE* meshNode)
 	if(pNode != mScene->GetRootNode())
 	{
 		lGlobal= lEvaluator->GetNodeGlobalTransform(pNode);
+//		lGlobal = lEvaluator->GetNodeLocalTransform(pNode);
 
 		FBXMatrixToFloat16( &lGlobal, meshNode->mat4x4 );
 	}
