@@ -1,8 +1,0 @@
-!COMMON_MEDIA_DIR!\Media\Textures    !OUTDIR_COMMON!\Media\Textures    *.png
-!COMMON_MEDIA_DIR!\Platform\CrossPlatform\SFX    !OUTDIR_COMMON!\Platform\CrossPlatform\SFX   *.*
-!COMMON_MEDIA_DIR!\Platform\CrossPlatform\SL    !OUTDIR_COMMON!\Platform\CrossPlatform\SL   *.*
-!COMMON_MEDIA_DIR!\Platform\DirectX11\HLSL    !OUTDIR_COMMON!\Platform\DirectX11\HLSL   *.*
-!COMMON_MEDIA_DIR!\Media\shaderbin    !OUTDIR_COMMON!\shaderbin   *.fxo
-!COMMON_MEDIA_DIR!\Platform\XboxOne\shaderbin    !OUTDIR_COMMON!\shaderbin   *.fxo
-!COMMON_MEDIA_DIR!\Media\shaderbin    !OUTDIR_COMMON!\shaderbin   *.sfxo
-!COMMON_MEDIA_DIR!\Platform\XboxOne\shaderbin    !OUTDIR_COMMON!\shaderbin   *.sfxo
