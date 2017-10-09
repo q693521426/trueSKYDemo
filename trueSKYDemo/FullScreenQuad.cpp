@@ -245,7 +245,8 @@ void FullScreenQuad::Render(ID3D11RenderTargetView* RTV,ID3D11ShaderResourceView
 {
 	//float BlendFactor[4] = {0.0f,0.0f,0.0f,0.0f};
 	//m_pd3dImmediateContext->OMSetBlendState(m_pBlendState,BlendFactor,0xffffffff);
-	m_pd3dImmediateContext->OMSetRenderTargets(1,&RTV,nullptr);
+	if(RTV!=nullptr)
+		m_pd3dImmediateContext->OMSetRenderTargets(1,&RTV,nullptr);
 
 	unsigned int stride;
 	unsigned int offset;

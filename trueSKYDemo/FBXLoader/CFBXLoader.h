@@ -20,6 +20,7 @@
 #define FBXSDK_NEW_API	// 新しいバージョン使うとき用
 #endif
 
+#define WIN32_LEAN_AND_MEAN
 #include <fbxsdk.h>
 #include <Windows.h>
 

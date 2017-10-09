@@ -25,6 +25,11 @@ FrameBuffer::~FrameBuffer(void)
 {
 }
 
+bool Initialize()
+{
+	return true;
+}
+
 void FrameBuffer::Release()
 {
 	m_pd3dDevice = nullptr;
@@ -169,11 +174,13 @@ HRESULT FrameBuffer::OnD3D11CreateDevice(ID3D11Device* pd3dDevice, ID3D11DeviceC
 
 	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	//depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
 	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
 	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	//depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
 	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
@@ -205,11 +212,14 @@ void FrameBuffer::ClearDepth(float Depth)
 	m_pd3dImmediateContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH, Depth, 0);
 }
 
-void FrameBuffer::Activate()
+void FrameBuffer::Activate(bool clear)
 {
-	float	ClearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	ClearRTV(ClearColor);
-	ClearDepth(1.f);
+	if(clear)
+	{
+		float	ClearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		ClearRTV(ClearColor);
+		ClearDepth(1.f);
+	}
 	m_pd3dImmediateContext->OMSetDepthStencilState(m_pOnDepthStencilState,1);
 	m_pd3dImmediateContext->OMSetRenderTargets(1,&m_pFrameRenderTargetView,m_pDepthStencilView);
 	m_pd3dImmediateContext->RSSetViewports(1,&m_viewport);
@@ -221,14 +231,17 @@ void FrameBuffer::Deactivate()
 
 void FrameBuffer::DeactivateDepth()
 {
-	m_pd3dImmediateContext->OMSetDepthStencilState(m_pOffDepthStencilState,1);
+	//m_pd3dImmediateContext->OMSetDepthStencilState(m_pOffDepthStencilState,1);
+	m_pd3dImmediateContext->OMSetRenderTargets(1,&m_pFrameRenderTargetView,nullptr);
 }
 
-void FrameBuffer::ActivateDepth()
+void FrameBuffer::ActivateDepth(bool clear)
 {
 	m_pd3dImmediateContext->OMSetDepthStencilState(m_pOnDepthStencilState,1);
 	m_pd3dImmediateContext->OMSetRenderTargets(1,&m_pFrameRenderTargetView,m_pDepthStencilView);
 	m_pd3dImmediateContext->RSSetViewports(1,&m_viewport);
+	if(clear)
+		ClearDepth(1.f);
 }
 
 ID3D11Texture2D* FrameBuffer::GetDepthResource()

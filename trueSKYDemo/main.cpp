@@ -4,6 +4,8 @@
 #include "DXUTsettingsDlg.h"
 #include "DXUTCamera.h"
 
+#include "./MicroProfile/microprofile.h"
+
 #include "Model.h" 
 #include "TrueSKYRender.h"
 #include "FullScreenQuad.h"
@@ -77,7 +79,7 @@ std::map<IDC_UI_ID,UIAttr>					UIAttrUsedMap;
 void InitApp();
 void InitUI();
 void UpdateMatrix();
-void UpdateKeyFrameAttr();
+void InitKeyFrameAttr();
 CDXUTDialog* GetCDXUTDialog(IDC_UI_ID);
 //--------------------------------------------------------------------------------------
 // Reject any D3D11 devices that aren't acceptable by returning false
@@ -178,8 +180,23 @@ HRESULT CALLBACK OnD3D11CreateDevice(ID3D11Device* pd3dDevice, const DXGI_SURFAC
 		m_TrueSKYRender->Initialize();
 	V_RETURN(m_TrueSKYRender->OnD3D11CreateDevice(g_pd3dDevice, g_pd3dImmediateContext));
 
-	UpdateKeyFrameAttr();
+	InitKeyFrameAttr();
 #endif
+
+	MicroProfileOnThreadCreate("trueSKYDemo");
+//	MicroProfileSetForceEnable(true);
+	MicroProfileSetEnableAllGroups(true);
+	MicroProfileSetForceMetaCounters(true);
+
+	MicroProfileGpuInitD3D11(g_pd3dDevice, g_pd3dImmediateContext);
+
+	MICROPROFILE_GPU_SET_CONTEXT(g_pd3dImmediateContext, MicroProfileGetGlobalGpuThreadLog());
+	MicroProfileStartContextSwitchTrace();
+
+	char buffer[256];
+	snprintf(buffer, sizeof(buffer)-1, "Webserver started in localhost:%d\n", MicroProfileWebServerPort());
+	OutputDebugStringA(buffer);
+
 	return S_OK;
 }
 
@@ -245,6 +262,7 @@ void CALLBACK OnFrameMove(double fTime, float fElapsedTime, void* pUserContext)
 void CALLBACK OnD3D11FrameRender(ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3dImmediateContext,
 	double fTime, float fElapsedTime, void* pUserContext)
 {
+	MICROPROFILE_SCOPEGPUI("Draw Total", 0xff00ff);
 	if( g_D3DSettingsDlg.IsActive() )
     {
         g_D3DSettingsDlg.OnRender( fElapsedTime );
@@ -252,8 +270,9 @@ void CALLBACK OnD3D11FrameRender(ID3D11Device* pd3dDevice, ID3D11DeviceContext* 
     }
 
 	auto pRTV = DXUTGetD3D11RenderTargetView();
-	//auto pDSV = DXUTGetD3D11DepthStencilView();
+	auto pDSV = DXUTGetD3D11DepthStencilView();
 	pd3dImmediateContext->ClearRenderTargetView(pRTV, ClearColor);
+	pd3dImmediateContext->ClearDepthStencilView( pDSV, D3D11_CLEAR_DEPTH, 1.0f, 0 );
 	pd3dImmediateContext->OMSetDepthStencilState(g_pOnDepthStencilState, 1);
 
 	UpdateMatrix();
@@ -264,10 +283,8 @@ void CALLBACK OnD3D11FrameRender(ID3D11Device* pd3dDevice, ID3D11DeviceContext* 
 						0.f, -1.f, 0.f, 0.f,
 						0.f, 0.f, 0.f, 1.f);
 	
-	D3DXMATRIX rotateZ,rotateX,rotateY;
+	D3DXMATRIX rotateZ;
 	D3DXMatrixRotationZ(&rotateZ,D3DX_PI);
-	D3DXMatrixRotationX(&rotateX,D3DX_PI);
-	D3DXMatrixRotationY(&rotateY,D3DX_PI);
 
 	D3DXMATRIX view =  g_View;
 
@@ -284,12 +301,18 @@ void CALLBACK OnD3D11FrameRender(ID3D11Device* pd3dDevice, ID3D11DeviceContext* 
 
 	m_TrueSKYRender->SetView(view);
 	m_TrueSKYRender->SetPro(g_Projection);
-	m_TrueSKYRender->PreRender(0, pd3dDevice, pd3dImmediateContext,IsSky);
+	{
+		MICROPROFILE_SCOPEGPUI("TrueSKY PreRender", 0x00ffff);
+		MICROPROFILE_SCOPEI("Main","TrueSKY PreRender", 0x00ffff);
+		m_TrueSKYRender->PreRender(0, pd3dDevice, pd3dImmediateContext,IsProfile,IsSky);
+	}
 	//g_Light.LightPos = m_TrueSKYRender->GetDirToSun();
 #endif
 #if LOAD_MODEL
 	if(IsLoadModel)
 	{
+		MICROPROFILE_SCOPEGPUI("Render Model", 0xff00ff);
+		MICROPROFILE_SCOPEI("Main","Render Model", 0xff00ff);
 		//counter-clockwise
 		pd3dImmediateContext->OMSetDepthStencilState(g_pOnDepthStencilState, 1);
 		pd3dImmediateContext->RSSetState(g_pBackCCWRS);
@@ -301,9 +324,13 @@ void CALLBACK OnD3D11FrameRender(ID3D11Device* pd3dDevice, ID3D11DeviceContext* 
 	}
 #endif //LOAD_MODEL
 #if TRUESKY
-	pd3dImmediateContext->OMSetDepthStencilState(g_pOffDepthStencilState, 1);
-	m_TrueSKYRender->Render(IsTrueSKY,IsProfile,IsCloud2D,IsCloud,IsSky);
-	pd3dImmediateContext->OMSetDepthStencilState(g_pOnDepthStencilState, 1);
+	{
+		MICROPROFILE_SCOPEGPUI("Render TrueSKY", 0xffff00);
+		MICROPROFILE_SCOPEI("Main","Render TrueSKY", 0xffff00);
+		pd3dImmediateContext->OMSetDepthStencilState(g_pOffDepthStencilState, 1);
+		m_TrueSKYRender->Render(IsTrueSKY,IsProfile,IsCloud2D,IsCloud,IsSky);
+		pd3dImmediateContext->OMSetDepthStencilState(g_pOnDepthStencilState, 1);
+	}
 #endif //TRUESKY
 	DXUT_BeginPerfEvent( DXUT_PERFEVENTCOLOR, L"HUD / Stats" );
     g_SkyParaUI.OnRender( fElapsedTime );
@@ -315,6 +342,8 @@ void CALLBACK OnD3D11FrameRender(ID3D11Device* pd3dDevice, ID3D11DeviceContext* 
 	WCHAR str[256] = L"trueSKY:";
 	wcscat_s(str,DXUTGetFrameStats( DXUTIsVsyncEnabled()));
 	SetWindowText(DXUTGetHWND(),str);
+
+	MicroProfileFlip(g_pd3dImmediateContext);
 }
 
 
@@ -339,6 +368,13 @@ void CALLBACK OnD3D11DestroyDevice(void* pUserContext)
 	SAFE_RELEASE(g_pBackCWRS);
 	SAFE_RELEASE(g_pOnDepthStencilState);
 	SAFE_RELEASE(g_pOffDepthStencilState);
+	g_SkyKeyFramer = nullptr;
+	g_CloudKeyFramer = nullptr;
+	g_Cloud2DKeyFramer = nullptr;
+	g_SkyKeyFrame = nullptr;
+	g_CloudKeyFrame = nullptr;
+	g_Cloud2DKeyFrame = nullptr;
+
 #if TRUESKY
 	if(m_TrueSKYRender)
 	{
@@ -356,6 +392,7 @@ void CALLBACK OnD3D11DestroyDevice(void* pUserContext)
 		m_Model = nullptr;
 	}
 #endif
+	MicroProfileShutdown();
 }
 
 
@@ -447,7 +484,7 @@ void CALLBACK OnGUIEvent( UINT nEvent, int nControlID, CDXUTControl* pControl, v
 				m_TrueSKYRender->ReLoadSq(sqFile);	
 				IsLoadSq=true;
 			}	
-			UpdateKeyFrameAttr();
+			InitKeyFrameAttr();
 #endif
 			break;
 		}
@@ -707,24 +744,24 @@ void InitApp()
 	UIAttrUsedMap.emplace(IDC_CLOUD2D_CLOUDINESS,
 		UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::cloudiness],
 							-100,100,100,0.f,1.f));
-	UIAttrUsedMap.emplace(IDC_CLOUD2D_DISTRIBUTION_BASE_LAYER,
-		UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::distributionBaseLayer],
-							-100,100,100,0.f,1.f));
-	UIAttrUsedMap.emplace(IDC_CLOUD2D_DISTRIBUTION_TRANSITION,
-		UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::distributionTransition],
-							-100,100,100,0.f,1.f));
+	//UIAttrUsedMap.emplace(IDC_CLOUD2D_DISTRIBUTION_BASE_LAYER,
+	//	UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::distributionBaseLayer],
+	//						-100,100,100,0.f,1.f));
+	//UIAttrUsedMap.emplace(IDC_CLOUD2D_DISTRIBUTION_TRANSITION,
+	//	UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::distributionTransition],
+	//						-100,100,100,0.f,1.f));
 	UIAttrUsedMap.emplace(IDC_CLOUD2D_UPPER_DENSITY,
 		UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::upperDensity],
 							-100,100,100,0.f,1.f));
-	UIAttrUsedMap.emplace(IDC_CLOUD2D_WIND_SPEED,
-		UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::windSpeed],
-							-2000,2000,2000,FLT_MIN,FLT_MAX));
+	//UIAttrUsedMap.emplace(IDC_CLOUD2D_WIND_SPEED,
+	//	UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::windSpeed],
+	//						-2000,2000,2000,FLT_MIN,FLT_MAX));
 	UIAttrUsedMap.emplace(IDC_CLOUD2D_BASE_KM,
 		UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::cloudBase],
 							-2000,2000,2000,FLT_MIN,FLT_MAX));
-	UIAttrUsedMap.emplace(IDC_CLOUD2D_HEIGHT_KM,
-		UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::cloudHeight],
-							-2000,2000,2000,FLT_MIN,FLT_MAX));
+	//UIAttrUsedMap.emplace(IDC_CLOUD2D_HEIGHT_KM,
+	//	UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::cloudHeight],
+	//						-2000,2000,2000,FLT_MIN,FLT_MAX));
 	UIAttrUsedMap.emplace(IDC_CLOUD2D_EDGE_NOISE_OCTAVES,
 		UIAttr(TrueSKYRender::cloudFramerIntAttrName[CloudFramerIntAttr::EdgeNoiseOctaves],
 							0,4,1,0,4));
@@ -825,9 +862,9 @@ CDXUTDialog* GetCDXUTDialog(IDC_UI_ID id)
 		return &g_Cloud2DParaUI;
 }
 
-void UpdateKeyFrameAttr()
+void InitKeyFrameAttr()
 {
-	m_TrueSKYRender->UpdateKeyFrameAttr();
+	m_TrueSKYRender->InitKeyFrameAttr();
 
 	g_SkyKeyFrame = m_TrueSKYRender->GetSkyFrameAttr();
 	g_CloudKeyFrame = m_TrueSKYRender->GetCloudFrameAttr();

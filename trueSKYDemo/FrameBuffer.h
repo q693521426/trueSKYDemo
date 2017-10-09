@@ -27,10 +27,10 @@ public:
 
 	void ClearRTV(float ClearColor[4]);
 	void ClearDepth(float Depth);
-	void Activate();
+	void Activate(bool clear=true);
 	void Deactivate();
 	void DeactivateDepth();
-	void ActivateDepth();
+	void ActivateDepth(bool clear=false);
 	ID3D11DeviceContext* GetD3dImmediateContext();
 
 	static DXGI_FORMAT GetDepthResourceFormat(DXGI_FORMAT depthformat);
@@ -62,6 +62,5 @@ private:
 	ID3D11BlendState*								m_pBlendState;
 	int												width;
 	int												height;
-	
 };
 

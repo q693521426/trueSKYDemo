@@ -48,8 +48,7 @@
 #define GET_Y_LPARAM(lp)                        ((int)(short)HIWORD(lp))
 
 #define SIMUL_CAMERA 0
-#define SIMUL_HDR 1
-#define SIMUL_SKY 1
+#define SIMUL_HDR 0
 
 __declspec(align(16)) class TrueSKYRender
 {
@@ -65,7 +64,7 @@ public:
 	void OnD3D11LostDevice();
 	void Release();
 	HRESULT OnD3D11CreateDevice(ID3D11Device*, ID3D11DeviceContext*);
-	void PreRender(int, ID3D11Device*, ID3D11DeviceContext*,bool IsSky = true);
+	void PreRender(int, ID3D11Device*, ID3D11DeviceContext*,bool IsProfile = false,bool IsSky = true);
 	void Render(bool IsTrueSky = true,bool IsProfile = false,bool Is2DCloud = true,bool IsCloud = true,bool IsSky = true);
 	void Resize(ID3D11RenderTargetView*,ID3D11DepthStencilView*	,D3D11_VIEWPORT*,const DXGI_SURFACE_DESC*);
 	void RecompileShaders();
@@ -74,12 +73,14 @@ public:
 	void OnMouse(bool,bool,bool,int,int,int );
 	bool InitEnv(const char* sq = nullptr);
 	void InitKeyFrameArray();
-	void UpdateKeyFrameAttr();
+	void InitKeyFrameAttr();
 
 	void SetWorld(const D3DXMATRIX&);
 	void SetView(const D3DXMATRIX&);
 	void SetPro(const D3DXMATRIX&);
 	void SetViewPos(const D3DXVECTOR4&);
+
+	void IsRender(bool,bool,bool);
 
 	simul::sky::SkyKeyframe* GetSkyFrameAttr();
 	void UpdateSkyFrameFloatAttr(const char* name,float value,float min,float max);
@@ -148,9 +149,9 @@ private:
 	simul::clouds::BaseWeatherRenderer*			weatherRenderer;
 	simul::crossplatform::BaseFramebuffer*		hdrFramebuffer;
 	simul::crossplatform::HdrRenderer*			hDRRenderer;
-	simul::sky::SkyKeyframer*					skyKeyFramer;
-	simul::clouds::CloudKeyframer*				cloudKeyFramer;
-	simul::clouds::CloudKeyframer*				cloud2DKeyFramer;
+	simul::sky::SkyKeyframer*					m_skyKeyFramer;
+	simul::clouds::CloudKeyframer*				m_cloudKeyFramer;
+	simul::clouds::CloudKeyframer*				m_cloud2DKeyFramer;
 
 	simul::sky::SkyKeyframe*					m_SkyFrameAttr;
 	simul::clouds::CloudKeyframe*				m_CloudFrameAttr;

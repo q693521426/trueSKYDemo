@@ -1,7 +1,9 @@
 #include "DXUT.h"
 #include "TrueSKYRender.h"
-#pragma optimize("",off)
+#include "./MicroProfile/microprofile.h"
+//#pragma optimize("",off)
 
+#pragma region AttrName
 char* TrueSKYRender::cloudFramerIntAttrName[]=
 {
 	"GridWidth"	,		
@@ -61,6 +63,7 @@ char* TrueSKYRender::cloudFrameFloatAttrName[]=
 	"worleyNoise",					
 	"worleyScale"				
 };
+#pragma endregion 
 
 TrueSKYRender::TrueSKYRender():
 	reverseDepth(false),
@@ -73,21 +76,27 @@ TrueSKYRender::TrueSKYRender():
 	m_SkyFrameAttr(nullptr),
 	m_CloudFrameAttr(nullptr),
 	m_Cloud2DFrameAttr(nullptr),
+	m_skyKeyFramer(nullptr),
+	m_cloudKeyFramer(nullptr),
+	m_cloud2DKeyFramer(nullptr),
+	m_pRenderTargetView(nullptr),
+	m_pDenthStencilView(nullptr),
+	m_pViewPort(nullptr),
 	frame_number(0)
 {
 }
-
 
 TrueSKYRender::~TrueSKYRender()
 {
 }
 
+#pragma region Initiliaze
 bool TrueSKYRender::Initialize(const char* sq)
 {
 	if(!InitEnv(sq))
 		return false;
 
-	UpdateKeyFrameAttr();
+	InitKeyFrameAttr();
 	InitKeyFrameArray();
 
 	weatherRenderer = new simul::clouds::BaseWeatherRenderer(env, NULL);
@@ -100,7 +109,7 @@ bool TrueSKYRender::Initialize(const char* sq)
 #else
 	m_Renderer = new FullScreenQuad();
 	m_FrameBuffer = new FrameBuffer();
-	m_FrameBuffer->SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_FrameBuffer->SetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT);
 	m_FrameBuffer->SetDepthFormat(DXGI_FORMAT_D32_FLOAT);
 #endif
 
@@ -139,7 +148,7 @@ bool TrueSKYRender::ReLoadSq(const char* sq)
 	del(weatherRenderer,nullptr);
 	weatherRenderer = new simul::clouds::BaseWeatherRenderer(env, NULL);
 
-	UpdateKeyFrameAttr();
+	InitKeyFrameAttr();
 	InitKeyFrameArray();
 
 	weatherRenderer->RestoreDeviceObjects(&renderPlatformDx11);
@@ -177,30 +186,30 @@ bool TrueSKYRender::InitEnv(const char* sq)
 void TrueSKYRender::InitKeyFrameArray()
 {
 	skyKeyFramerArray.clear();
-	for(int i = 0; i < skyKeyFramer->GetNumKeyframes();i++)
+	for(int i = 0; i < m_skyKeyFramer->GetNumKeyframes();i++)
 	{
-		simul::sky::SkyKeyframe *k=(simul::sky::SkyKeyframe*)skyKeyFramer->GetKeyframe(i);
+		simul::sky::SkyKeyframe *k=(simul::sky::SkyKeyframe*)m_skyKeyFramer->GetKeyframe(i);
 		skyKeyFramerArray.push_back(*k);
 	}
 	
 	cloudKeyFramerArray.clear();
-	for(int i = 0; i < cloudKeyFramer->GetNumKeyframes();i++)
+	for(int i = 0; i < m_cloudKeyFramer->GetNumKeyframes();i++)
 	{
-		simul::clouds::CloudKeyframe *k=(simul::clouds::CloudKeyframe*)cloudKeyFramer->GetKeyframe(i);
+		simul::clouds::CloudKeyframe *k=(simul::clouds::CloudKeyframe*)m_cloudKeyFramer->GetKeyframe(i);
 		cloudKeyFramerArray.push_back(*k);
 	}
 //	cloudKeyFramer->SetExplicitOffsets(true);
 
 	cloud2DKeyFramerArray.clear();
-	for(int i =0; i < cloud2DKeyFramer->GetNumKeyframes();i++)
+	for(int i =0; i < m_cloud2DKeyFramer->GetNumKeyframes();i++)
 	{
-		simul::clouds::CloudKeyframe *k=(simul::clouds::CloudKeyframe*)cloud2DKeyFramer->GetKeyframe(i);
+		simul::clouds::CloudKeyframe *k=(simul::clouds::CloudKeyframe*)m_cloud2DKeyFramer->GetKeyframe(i);
 		cloud2DKeyFramerArray.push_back(*k);
 	}
 
 }
 
-void TrueSKYRender::UpdateKeyFrameAttr()
+void TrueSKYRender::InitKeyFrameAttr()
 {
 	del(m_SkyFrameAttr,nullptr);
 	del(m_CloudFrameAttr,nullptr);
@@ -216,11 +225,13 @@ void TrueSKYRender::UpdateKeyFrameAttr()
 		m_Cloud2DFrameAttr->SetFloat(cloudFrameFloatAttrName[i],0.f);
 	}
 
-	skyKeyFramer=env->skyKeyframer;
-	cloudKeyFramer=env->cloudKeyframer;
-	cloud2DKeyFramer=env->cloud2DKeyframer;
+	m_skyKeyFramer=env->skyKeyframer;
+	m_cloudKeyFramer=env->cloudKeyframer;
+	m_cloud2DKeyFramer=env->cloud2DKeyframer;
 }
+#pragma endregion
 
+#pragma region Release
 void TrueSKYRender::OnD3D11LostDevice()
 {
 	weatherRenderer->InvalidateDeviceObjects();
@@ -235,12 +246,16 @@ void TrueSKYRender::Release()
 {
 	OnD3D11LostDevice();
 	del(weatherRenderer, nullptr);
-	cloudKeyFramer=nullptr;
-	skyKeyFramer=nullptr;
+	m_cloudKeyFramer=nullptr;
+	m_cloud2DKeyFramer=nullptr;
+	m_skyKeyFramer=nullptr;
 	del(env, nullptr);
 	del(m_SkyFrameAttr,nullptr);
 	del(m_CloudFrameAttr,nullptr);
 	del(m_Cloud2DFrameAttr,nullptr);
+	m_pRenderTargetView=nullptr;
+	m_pDenthStencilView=nullptr;
+	m_pViewPort=nullptr;
 #if SIMUL_HDR
 	del(hdrFramebuffer, nullptr);
 	del(hDRRenderer, nullptr);
@@ -258,7 +273,9 @@ void TrueSKYRender::Release()
 		m_FrameBuffer = nullptr;
 	}
 #endif
+
 }
+#pragma endregion
 
 HRESULT TrueSKYRender::OnD3D11CreateDevice(ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3dImmediateContext)
 {
@@ -273,19 +290,21 @@ HRESULT TrueSKYRender::OnD3D11CreateDevice(ID3D11Device* pd3dDevice, ID3D11Devic
 	V_RETURN(m_Renderer->OnD3D11CreateDevice(pd3dDevice, pd3dImmediateContext));
 	V_RETURN(m_FrameBuffer->OnD3D11CreateDevice(pd3dDevice, pd3dImmediateContext));
 #endif
-
 	return hr;
 }
 
-void TrueSKYRender::PreRender(int view_id, ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3dImmediateContext,bool IsSky)
+void TrueSKYRender::PreRender(int view_id, ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3dImmediateContext,bool IsProfile,bool IsSky)
 {
 	deviceContext.platform_context = pd3dImmediateContext;
 	deviceContext.renderPlatform = &renderPlatformDx11;
 	deviceContext.viewStruct.view_id = view_id;
 	deviceContext.viewStruct.depthTextureStyle = simul::crossplatform::PROJECTION;
 
-	simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatformDx11.GetGpuProfiler());
-	renderPlatformDx11.GetGpuProfiler()->StartFrame(deviceContext);
+	if(IsProfile)
+	{
+		simul::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatformDx11.GetGpuProfiler());
+		renderPlatformDx11.GetGpuProfiler()->StartFrame(deviceContext);
+	}
 
 	viewport = renderPlatformDx11.GetViewport(deviceContext, 0);
 	
@@ -309,22 +328,24 @@ void TrueSKYRender::PreRender(int view_id, ID3D11Device* pd3dDevice, ID3D11Devic
 	hdrFramebuffer->Clear(deviceContext, 0.f, 0.f, 0.f, 0.f, reverseDepth ? 0.f : 1.f);
 #else
 	m_FrameBuffer->Activate();
-	m_FrameBuffer->ActivateDepth();
+	m_FrameBuffer->ActivateDepth(true);
 #endif
-
-#if SIMUL_SKY
-	static simul::base::Timer timer;
-	float real_time = timer.UpdateTimeSum() / 1000.0f;
-
-	deviceContext.platform_context = pd3dImmediateContext;
-	env->Update();
-	//skyKeyFramer->SetLinkKeyframeTimeAndDaytime(false);
-	//weatherRenderer->EnableSky(false);
-	//weatherRenderer->SetShowSky(false);
-	//weatherRenderer->SetShowAtmospherics(false);
-	//weatherRenderer->SetShow2DCloudTextures(false);
-	weatherRenderer->PreRenderUpdate(deviceContext, real_time);
-#endif 
+	
+	{
+		MICROPROFILE_SCOPEI("TrueSKY PreRender","Env Update",0x00ffff);
+		env->Update();
+	}
+	{
+		static simul::base::Timer timer;
+		float real_time = timer.UpdateTimeSum() / 1000.0f;
+		MICROPROFILE_SCOPEI("TrueSKY PreRender","BaseWeather PreRender Update",0x00ffff);
+		//m_skyKeyFramer->SetLinkKeyframeTimeAndDaytime(false);
+		//weatherRenderer->EnableSky(false);
+		//weatherRenderer->SetShowSky(false);
+		//weatherRenderer->SetShowAtmospherics(false);
+		//weatherRenderer->SetShow2DCloudTextures(false);
+		weatherRenderer->PreRenderUpdate(deviceContext, real_time);
+	}
 #if SIMUL_HDR
 	hdrFramebuffer->ActivateDepth(deviceContext);
 #else
@@ -334,42 +355,9 @@ void TrueSKYRender::PreRender(int view_id, ID3D11Device* pd3dDevice, ID3D11Devic
 
 void TrueSKYRender::Render(bool IsTrueSKY,bool IsProfile,bool Is2DCloud,bool IsCloud,bool IsSky)
 {
-	//skyKeyFramer->ClearKeyframes();
-	if(Is2DCloud)
-	{
-		if(cloud2DKeyFramer->GetNumKeyframes()==0)
-		{
-			for(int i = 0 ;i<static_cast<int>(cloud2DKeyFramerArray.size());i++)
-			{
-				cloud2DKeyFramer->InsertKeyframe(cloud2DKeyFramerArray[i].time);
-				*(cloud2DKeyFramer->GetKeyframe(i))=cloud2DKeyFramerArray[i];
-			}
-		}
-	}
-	else
-	{
-		if(cloud2DKeyFramer->GetNumKeyframes()>0)
-			cloud2DKeyFramer->ClearKeyframes();
-	}
-	if(IsCloud)
-	{
-		if(cloudKeyFramer->GetNumKeyframes()==0)
-		{
-			for(int i = 0 ;i<static_cast<int>(cloudKeyFramerArray.size());i++)
-			{
-				cloudKeyFramer->InsertKeyframe(cloudKeyFramerArray[i].time);
-				*(cloudKeyFramer->GetKeyframe(i))=cloudKeyFramerArray[i];
-			}
-		}
-	}
-	else
-	{
-		if(cloudKeyFramer->GetNumKeyframes()>0)
-			cloudKeyFramer->ClearKeyframes();
-	}
+	IsRender(Is2DCloud,IsCloud,IsSky);
 
 	simul::dx11::Texture depthTexture;
-
 #if SIMUL_HDR
 	hdrFramebuffer->DeactivateDepth(deviceContext);
 	depthTexture.InitFromExternalD3D11Texture2D(&renderPlatformDx11, hdrFramebuffer->GetDepthTexture()->AsD3D11Texture2D(), hdrFramebuffer->GetDepthTexture()->AsD3D11ShaderResourceView());
@@ -378,30 +366,51 @@ void TrueSKYRender::Render(bool IsTrueSKY,bool IsProfile,bool Is2DCloud,bool IsC
 	depthTexture.InitFromExternalD3D11Texture2D(&renderPlatformDx11, m_FrameBuffer->GetDepthResource(), m_FrameBuffer->GetDepthSRV());
 #endif
 
-#if SIMUL_SKY
+#if SIMUL_HDR
+	hdrFramebuffer->Activate(deviceContext);
+	hdrFramebuffer->DeactivateDepth(deviceContext);
+	hdrFramebuffer->Clear(deviceContext, 0.f, 0.f, 0.f, 0.f, reverseDepth ? 0.f : 1.f);
+#else
+	simul::crossplatform::BaseFramebuffer::setDefaultRenderTargets(m_FrameBuffer->GetRenderTargetView(),
+		nullptr,
+		static_cast<uint32_t>(m_pViewPort->TopLeftX),
+		static_cast<uint32_t>(m_pViewPort->TopLeftY),
+		static_cast<uint32_t>(m_pViewPort->TopLeftX + m_pViewPort->Width),
+		static_cast<uint32_t>(m_pViewPort->TopLeftY + m_pViewPort->Height)
+	);
+#endif
+
 	if(IsTrueSKY)
 		weatherRenderer->Render(deviceContext, simul::clouds::TrueSkyRenderMode::STANDARD, 1.0f, 1.0f, &depthTexture, nullptr, &viewport);
-#endif 
 
-#if SIMUL_HDR	
+#if SIMUL_HDR
 	hdrFramebuffer->Deactivate(deviceContext);
 	hDRRenderer->Render(deviceContext, hdrFramebuffer->GetTexture(), 1.0f, 1.0f);
 #else
+	simul::dx11::Texture tex;
+	tex.InitFromExternalD3D11Texture2D(&renderPlatformDx11, m_FrameBuffer->GetFrameBufferResource(), m_FrameBuffer->GetFrameBufferSRV());
 	m_Renderer->Render(m_pRenderTargetView,m_FrameBuffer->GetFrameBufferSRV());
+	
+	simul::crossplatform::BaseFramebuffer::setDefaultRenderTargets(m_pRenderTargetView,
+		nullptr,
+		static_cast<uint32_t>(m_pViewPort->TopLeftX),
+		static_cast<uint32_t>(m_pViewPort->TopLeftY),
+		static_cast<uint32_t>(m_pViewPort->TopLeftX + m_pViewPort->Width),
+		static_cast<uint32_t>(m_pViewPort->TopLeftY + m_pViewPort->Height)
+	);
 #endif
-
 	// Optional debug displays:
 	if(IsProfile)
 	{
 		weatherRenderer->SetShowCloudCrossSections(true);
 		weatherRenderer->SetShowCompositing(true);
 		weatherRenderer->RenderOverlays(deviceContext);
+		renderPlatformDx11.GetGpuProfiler()->EndFrame(deviceContext);
+		//const char *txt = simul::dx11::Profiler::GetGlobalProfiler().GetDebugText(simul::base::PLAINTEXT);
+		//renderPlatformDx11.Print(deviceContext, 16, 16, txt,vec4(1,1,1,1),vec4(0,0,0,.5f));
+		//renderPlatformDx11.DrawDepth(deviceContext, 32, 32, 64, 64, hdrFramebuffer->GetDepthTexture());
+		frame_number++;
 	}
-	renderPlatformDx11.GetGpuProfiler()->EndFrame(deviceContext);
-	//const char *txt = simul::dx11::Profiler::GetGlobalProfiler().GetDebugText(simul::base::PLAINTEXT);
-	//renderPlatformDx11.Print(deviceContext, 16, 16, txt,vec4(1,1,1,1),vec4(0,0,0,.5f));
-	//renderPlatformDx11.DrawDepth(deviceContext, 32, 32, 64, 64, hdrFramebuffer->GetDepthTexture());
-	frame_number++;
 }
 
 void TrueSKYRender::Resize(ID3D11RenderTargetView* pRTV,
@@ -415,7 +424,6 @@ void TrueSKYRender::Resize(ID3D11RenderTargetView* pRTV,
 	m_pRenderTargetView = pRTV;
 	m_pDenthStencilView = pDSV;
 	m_pViewPort = pViewPort;
-#if SIMUL_HDR
 	simul::crossplatform::BaseFramebuffer::setDefaultRenderTargets(m_pRenderTargetView,
 		m_pDenthStencilView,
 		static_cast<uint32_t>(m_pViewPort->TopLeftX),
@@ -424,13 +432,15 @@ void TrueSKYRender::Resize(ID3D11RenderTargetView* pRTV,
 		static_cast<uint32_t>(m_pViewPort->TopLeftY + m_pViewPort->Height)
 	);
 
+#if SIMUL_HDR
 	hdrFramebuffer->SetWidthAndHeight(W, H);
 	hdrFramebuffer->SetAntialiasing(1);
 	hDRRenderer->SetBufferSize(W, H);
-#else
+#else 
 	m_Renderer->Resize(W,H);
 	m_FrameBuffer->Resize(W,H);
 #endif
+
 }
 
 void TrueSKYRender::RecompileShaders()
@@ -446,6 +456,7 @@ bool TrueSKYRender::MsgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam 
 {
 	switch (uMsg)
 	{
+#if SIMUL_CAMERA
 	case WM_MOUSEWHEEL:
 		{
 			int xPos = GET_X_LPARAM(lParam); 
@@ -467,6 +478,7 @@ bool TrueSKYRender::MsgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam 
 				,0,xPos,yPos);
 			break;
 		}
+#endif
 	}
 	return true;
 }
@@ -486,94 +498,9 @@ void TrueSKYRender::OnMouse(bool bLeftButtonDown
 		mouseCameraInput.MouseY=yPos;
 }
 
-simul::sky::SkyKeyframe* TrueSKYRender::GetSkyFrameAttr()
-{
-	return m_SkyFrameAttr;
-}
-
-void TrueSKYRender::UpdateSkyFrameFloatAttr(const char* name,float value,float min,float max)
-{
-	skyKeyFramer->GetNextModifiableKeyframe();
-	for(int i=0;i<(int)skyKeyFramerArray.size();i++)
-	{
-		simul::sky::SkyKeyframe *k=(simul::sky::SkyKeyframe *)skyKeyFramer->GetKeyframe(i);
-		float data = skyKeyFramerArray[i].GetFloat(name) + value;
-		data = clamp(data,min,max);
-		k->SetFloat(name,data);
-	}
-	skyKeyFramer->Update();
-}	
-
-simul::clouds::CloudKeyframe* TrueSKYRender::GetCloudFrameAttr()
-{
-	return m_CloudFrameAttr;
-}
-
-void TrueSKYRender::UpdateCloudFrameFloatAttr(const char* name,float value,float min,float max)
-{
-	cloudKeyFramer->GetNextModifiableKeyframe();
-	for(int i=0;i<(int)cloudKeyFramerArray.size();i++)
-	{
-		simul::clouds::CloudKeyframe *k=(simul::clouds::CloudKeyframe *)cloudKeyFramer->GetKeyframe(i);
-		float data = cloudKeyFramerArray[i].GetFloat(name) + value;
-		data = clamp(data,min,max);
-		k->SetFloat(name,data);
-	}
-	cloudKeyFramer->Update(0.005);
-}
-
-void TrueSKYRender::UpdateCloudFramerIntAttr(const char* name,int value,int min,int max)
-{
-	cloudKeyFramer->GetNextModifiableKeyframe();
-	int data = clamp(value,min,max);
-	cloudKeyFramer->SetInt(name,data);
-	cloudKeyFramer->Update(0.005);
-}
-
-simul::clouds::CloudKeyframe* TrueSKYRender::GetCloud2DFrameAttr()
-{
-	return m_Cloud2DFrameAttr;
-}
-
-void TrueSKYRender::UpdateCloud2DFrameFloatAttr(const char* name,float value,float min,float max)
-{
-	cloud2DKeyFramer->GetNextModifiableKeyframe();
-	for(int i=0;i<(int)cloud2DKeyFramerArray.size();i++)
-	{
-		simul::clouds::CloudKeyframe *k=(simul::clouds::CloudKeyframe *)cloud2DKeyFramer->GetKeyframe(i);
-		float data = cloud2DKeyFramerArray[i].GetFloat(name) + value;
-		data = clamp(data,min,max);
-		k->SetFloat(name,data);
-	}
-	cloud2DKeyFramer->Update(0.005);
-}
-
-void TrueSKYRender::UpdateCloud2DFramerIntAttr(const char* name,int value,int min,int max)
-{
-	cloud2DKeyFramer->GetNextModifiableKeyframe();
-	int data = clamp(value,min,max);
-	cloud2DKeyFramer->SetInt(name,data);
-	cloud2DKeyFramer->Update(0.005);
-}
-
-
-simul::sky::SkyKeyframer* TrueSKYRender::GetSkyFramerAttr()
-{
-	return skyKeyFramer;
-}
-
-simul::clouds::CloudKeyframer* TrueSKYRender::GetCloudFramerAttr()
-{
-	return cloudKeyFramer;
-}
-
-simul::clouds::CloudKeyframer* TrueSKYRender::GetCloud2DFramerAttr()
-{
-	return cloud2DKeyFramer;
-}
-
 void TrueSKYRender::OnFrameMove(double fTime,float time_step,bool* keydown)
 {
+#if SIMUL_CAMERA
 	mouseCameraInput.forward_back_input	=(float)keydown['w']-(float)keydown['s'];
 	mouseCameraInput.right_left_input	=(float)keydown['d']-(float)keydown['a'];
 	mouseCameraInput.up_down_input		=(float)keydown['t']-(float)keydown['g'];
@@ -584,6 +511,93 @@ void TrueSKYRender::OnFrameMove(double fTime,float time_step,bool* keydown)
 							,mouseCameraState
 							,mouseCameraInput
 							,10000.f);
+#endif
+}
+
+#pragma region Ser & Get
+simul::sky::SkyKeyframe* TrueSKYRender::GetSkyFrameAttr()
+{
+	return m_SkyFrameAttr;
+}
+
+void TrueSKYRender::UpdateSkyFrameFloatAttr(const char* name,float value,float min,float max)
+{
+	m_skyKeyFramer->GetNextModifiableKeyframe();
+	for(int i=0;i<(int)skyKeyFramerArray.size();i++)
+	{
+		simul::sky::SkyKeyframe *k=(simul::sky::SkyKeyframe *)m_skyKeyFramer->GetKeyframe(i);
+		float data = skyKeyFramerArray[i].GetFloat(name) + value;
+		data = clamp(data,min,max);
+		k->SetFloat(name,data);
+	}
+	m_skyKeyFramer->Update();
+}	
+
+simul::clouds::CloudKeyframe* TrueSKYRender::GetCloudFrameAttr()
+{
+	return m_CloudFrameAttr;
+}
+
+void TrueSKYRender::UpdateCloudFrameFloatAttr(const char* name,float value,float min,float max)
+{
+	m_cloudKeyFramer->GetNextModifiableKeyframe();
+	for(int i=0;i<(int)cloudKeyFramerArray.size();i++)
+	{
+		simul::clouds::CloudKeyframe *k=(simul::clouds::CloudKeyframe *)m_cloudKeyFramer->GetKeyframe(i);
+		float data = cloudKeyFramerArray[i].GetFloat(name) + value;
+		data = clamp(data,min,max);
+		k->SetFloat(name,data);
+	}
+	m_cloudKeyFramer->Update(0.005);
+}
+
+void TrueSKYRender::UpdateCloudFramerIntAttr(const char* name,int value,int min,int max)
+{
+	m_cloudKeyFramer->GetNextModifiableKeyframe();
+	int data = clamp(value,min,max);
+	m_cloudKeyFramer->SetInt(name,data);
+	m_cloudKeyFramer->Update(0.005);
+}
+
+simul::clouds::CloudKeyframe* TrueSKYRender::GetCloud2DFrameAttr()
+{
+	return m_Cloud2DFrameAttr;
+}
+
+void TrueSKYRender::UpdateCloud2DFrameFloatAttr(const char* name,float value,float min,float max)
+{
+	m_cloud2DKeyFramer->GetNextModifiableKeyframe();
+	for(int i=0;i<(int)cloud2DKeyFramerArray.size();i++)
+	{
+		simul::clouds::CloudKeyframe *k=(simul::clouds::CloudKeyframe *)m_cloud2DKeyFramer->GetKeyframe(i);
+		float data = cloud2DKeyFramerArray[i].GetFloat(name) + value;
+		data = clamp(data,min,max);
+		k->SetFloat(name,data);
+	}
+	m_cloud2DKeyFramer->Update(0.005);
+}
+
+void TrueSKYRender::UpdateCloud2DFramerIntAttr(const char* name,int value,int min,int max)
+{
+	m_cloud2DKeyFramer->GetNextModifiableKeyframe();
+	int data = clamp(value,min,max);
+	m_cloud2DKeyFramer->SetInt(name,data);
+	m_cloud2DKeyFramer->Update(0.005);
+}
+
+simul::sky::SkyKeyframer* TrueSKYRender::GetSkyFramerAttr()
+{
+	return m_skyKeyFramer;
+}
+
+simul::clouds::CloudKeyframer* TrueSKYRender::GetCloudFramerAttr()
+{
+	return m_cloudKeyFramer;
+}
+
+simul::clouds::CloudKeyframer* TrueSKYRender::GetCloud2DFramerAttr()
+{
+	return m_cloud2DKeyFramer;
 }
 
 void TrueSKYRender::SetWorld(const D3DXMATRIX& world)
@@ -606,4 +620,42 @@ void TrueSKYRender::SetPro(const D3DXMATRIX& pro)
 void TrueSKYRender::SetViewPos(const D3DXVECTOR4& viewPos)
 {
 	m_ViewPos = viewPos;
+}
+#pragma endregion
+
+void TrueSKYRender::IsRender(bool Is2DCloud,bool IsCloud,bool IsSky)
+{
+	//m_skyKeyFramer->ClearKeyframes();
+	if(Is2DCloud)
+	{
+		if(m_cloud2DKeyFramer->GetNumKeyframes()==0)
+		{
+			for(int i = 0 ;i<static_cast<int>(cloud2DKeyFramerArray.size());i++)
+			{
+				m_cloud2DKeyFramer->InsertKeyframe(cloud2DKeyFramerArray[i].time);
+				*(m_cloud2DKeyFramer->GetKeyframe(i))=cloud2DKeyFramerArray[i];
+			}
+		}
+	}
+	else
+	{
+		if(m_cloud2DKeyFramer->GetNumKeyframes()>0)
+			m_cloud2DKeyFramer->ClearKeyframes();
+	}
+	if(IsCloud)
+	{
+		if(m_cloudKeyFramer->GetNumKeyframes()==0)
+		{
+			for(int i = 0 ;i<static_cast<int>(cloudKeyFramerArray.size());i++)
+			{
+				m_cloudKeyFramer->InsertKeyframe(cloudKeyFramerArray[i].time);
+				*(m_cloudKeyFramer->GetKeyframe(i))=cloudKeyFramerArray[i];
+			}
+		}
+	}
+	else
+	{
+		if(m_cloudKeyFramer->GetNumKeyframes()>0)
+			m_cloudKeyFramer->ClearKeyframes();
+	}
 }

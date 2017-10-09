@@ -4,6 +4,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 //--------------------------------------------------------------------------------------
 #include "DXUT.h"
+#include "../../MicroProfile/microprofile.h"
 #define DXUT_MIN_WINDOW_SIZE_X 200
 #define DXUT_MIN_WINDOW_SIZE_Y 200
 #define DXUT_COUNTER_STAT_LENGTH 2048
@@ -1776,11 +1777,13 @@ HRESULT WINAPI DXUTMainLoop( HACCEL hAccel )
 
     while( WM_QUIT != msg.message )
     {
+		MICROPROFILE_SCOPEI("Main", "MainLoop", 0xff00ff);
         // Use PeekMessage() so we can use idle time to render the scene. 
         bGotMsg = ( PeekMessage( &msg, NULL, 0U, 0U, PM_REMOVE ) != 0 );
 
         if( bGotMsg )
         {
+			MICROPROFILE_SCOPEI("Main","MessageHandling", 0x00ff00);
             // Translate and dispatch the message
             if( hAccel == NULL || hWnd == NULL ||
                 0 == TranslateAccelerator( hWnd, hAccel, &msg ) )
@@ -1791,6 +1794,7 @@ HRESULT WINAPI DXUTMainLoop( HACCEL hAccel )
         }
         else
         {
+			MICROPROFILE_SCOPEI("Main","Render", 0xffff00);
             // Render a frame during idle time (no messages are waiting)
             DXUTRender3DEnvironment();
         }

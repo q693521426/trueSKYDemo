@@ -141,7 +141,7 @@
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <ExceptionHandling>Sync</ExceptionHandling>
       <AdditionalIncludeDirectories>DXUT\Core;DXUT\Optional;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;DEBUG;PROFILE;_WINDOWS;D3DXFX_LARGEADDRESS_HANDLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;MICROPROFILE_GPU_TIMERS_D3D11=1;MICROPROFILE_ENABLED=1;WIN32;_DEBUG;DEBUG;PROFILE;_WINDOWS;D3DXFX_LARGEADDRESS_HANDLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -149,7 +149,7 @@
     </ClCompile>
     <Link>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>d3dcompiler.lib;d3dx11d.lib;d3dx9d.lib;dxerr.lib;dxguid.lib;winmm.lib;comctl32.lib;usp10.lib;DirectXMesh.lib;libfbxsdk-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dxguid.lib;Ws2_32.lib;advapi32.lib;shell32.lib;d3dcompiler.lib;d3dx11d.lib;d3dx9d.lib;dxerr.lib;winmm.lib;usp10.lib;comctl32.lib;DirectXMesh.lib;libfbxsdk-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <LargeAddressAware>true</LargeAddressAware>
@@ -388,6 +388,7 @@
     <ClCompile Include="FBXLoader\DDSTextureLoader.cpp" />
     <ClCompile Include="FrameBuffer.cpp" />
     <ClCompile Include="FullScreenQuad.cpp" />
+    <ClCompile Include="MicroProfile\microprofile.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="ModelConstants.cpp" />
     <ClCompile Include="RenderStates.cpp" />
@@ -417,6 +418,8 @@
     <ClCompile Include="DXUT\Optional\SDKmisc.cpp" />
     <ClInclude Include="FrameBuffer.h" />
     <ClInclude Include="FullScreenQuad.h" />
+    <ClInclude Include="MicroProfile\microprofile.h" />
+    <ClInclude Include="MicroProfile\microprofile_html.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="ModelConstants.h" />
     <ClInclude Include="RenderStates.h" />
