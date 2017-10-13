@@ -49,7 +49,7 @@
 
 #define SIMUL_CAMERA 0
 #define SIMUL_HDR 0
-
+#define MICROPROFILE 0
 __declspec(align(16)) class TrueSKYRender
 {
 public:
@@ -64,8 +64,11 @@ public:
 	void OnD3D11LostDevice();
 	void Release();
 	HRESULT OnD3D11CreateDevice(ID3D11Device*, ID3D11DeviceContext*);
-	void PreRender(int, ID3D11Device*, ID3D11DeviceContext*,bool IsProfile = false,bool IsSky = true);
-	void Render(bool IsTrueSky = true,bool IsProfile = false,bool Is2DCloud = true,bool IsCloud = true,bool IsSky = true);
+	void PreRender(int, ID3D11Device*, ID3D11DeviceContext*,
+		bool IsProfile = false,bool Is2DCloud = true,
+		bool IsCloud = true,bool IsSky = true,
+		bool IsAnimation = true);
+	void Render(bool IsTrueSky = true,bool IsProfile = false);
 	void Resize(ID3D11RenderTargetView*,ID3D11DepthStencilView*	,D3D11_VIEWPORT*,const DXGI_SURFACE_DESC*);
 	void RecompileShaders();
 	void OnFrameMove(double fTime,float time_step,bool* keydown);
@@ -80,10 +83,15 @@ public:
 	void SetPro(const D3DXMATRIX&);
 	void SetViewPos(const D3DXVECTOR4&);
 
-	void IsRender(bool,bool,bool);
+	void SetAnimationTimeStep(const int);
+
+	void IsRender(bool,bool,bool,bool);
 
 	simul::sky::SkyKeyframe* GetSkyFrameAttr();
 	void UpdateSkyFrameFloatAttr(const char* name,float value,float min,float max);
+
+	simul::sky::SkyKeyframer* GetSkyFramerAttr();
+	void UpdateSkyFramerFloatAttr(const char* name,float value,float min,float max);
 
 	simul::clouds::CloudKeyframe* GetCloudFrameAttr();
 	void TrueSKYRender::UpdateCloudFrameFloatAttr(const char* name,float value,float min,float max);
@@ -94,20 +102,8 @@ public:
 	simul::clouds::CloudKeyframer* GetCloudFramerAttr();
 	void UpdateCloudFramerIntAttr(const char* name,int value,int min,int max);
 
-	
 	simul::clouds::CloudKeyframer* GetCloud2DFramerAttr();
 	void UpdateCloud2DFramerIntAttr(const char* name,int value,int min,int max);
-
-	simul::sky::SkyKeyframer* GetSkyFramerAttr();
-	//void* operator new(size_t i)
-	//{
-	//	return _mm_malloc(i, 16);
-	//}
-
-	//void operator delete(void* p)
-	//{
-	//	_mm_free(p);
-	//}
 
 	static int clamp(int i,int a,int b)
 	{
@@ -141,22 +137,23 @@ private:
 	D3DXMATRIX						m_Projection;
 	D3DXVECTOR4						m_ViewPos;
 	
-	
 	bool							reverseDepth;
 	int								frame_number;
+	int								frame_refresh;
+	int								time_step;
 
 	simul::clouds::Environment*					env;
 	simul::clouds::BaseWeatherRenderer*			weatherRenderer;
 	simul::crossplatform::BaseFramebuffer*		hdrFramebuffer;
 	simul::crossplatform::HdrRenderer*			hDRRenderer;
-	simul::sky::SkyKeyframer*					m_skyKeyFramer;
-	simul::clouds::CloudKeyframer*				m_cloudKeyFramer;
-	simul::clouds::CloudKeyframer*				m_cloud2DKeyFramer;
+
+	simul::sky::SkyKeyframer*					skyKeyFramer;
+	simul::clouds::CloudKeyframer*				cloudKeyFramer;
+	simul::clouds::CloudKeyframer*				cloud2DKeyFramer;
 
 	simul::sky::SkyKeyframe*					m_SkyFrameAttr;
 	simul::clouds::CloudKeyframe*				m_CloudFrameAttr;
 	simul::clouds::CloudKeyframe*				m_Cloud2DFrameAttr;
-
 
 	ID3D11RenderTargetView*						m_pRenderTargetView;
 	ID3D11DepthStencilView*						m_pDenthStencilView;

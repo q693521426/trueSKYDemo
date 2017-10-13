@@ -48,4 +48,11 @@ struct FrustumBuffer
 	D3DXVECTOR4 ViewPos;
 };
 
+struct CameraSqFile
+{
+	float FieldOfViewDegrees;
+	float PosKm[3];
+	float Quaternion[4];
+};
+
 HRESULT CompileShader( _In_ LPCWSTR srcFile, _In_ LPCSTR entryPoint, _In_ LPCSTR profile, _Outptr_ ID3DBlob** blob );

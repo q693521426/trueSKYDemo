@@ -12,7 +12,7 @@ Model::Model():
 	m_pTextureRV(nullptr),
 	m_pSamplerLinear(nullptr),
 	ModelHeight(2100.f),
-	ModelScaling(100.f)
+	ModelScaling(1000.f)
 {
 }
 
@@ -232,6 +232,10 @@ void Model::Resize(const DXGI_SURFACE_DESC* pBackBufferSurfaceDesc)
 #endif
 }
 
+void Model::SetModelHeight(float h)
+{
+	ModelHeight = h;
+}
 
 void Model::SetWVP(const D3DXMATRIX& wvp)
 {

@@ -26,6 +26,7 @@ public:
 	void SetViewPos(const D3DXVECTOR4&);
 	void SetLight(const LightBuffer*);
 
+	void SetModelHeight(float h);
 	//void* operator new(size_t i)
 	//{
 	//	return _mm_malloc(i, 16);

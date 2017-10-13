@@ -435,6 +435,8 @@
   <ItemGroup>
     <None Include="Resource\basic_setting.sq" />
     <None Include="Resource\basic_setting_plus_windspeed.sq" />
+    <None Include="Resource\blue_casual_sky_01.sq" />
+    <None Include="Resource\blue_casual_sky_02.sq" />
     <None Include="Resource\sulan2.fbx" />
     <None Include="Resource\trueSKY.aps" />
   </ItemGroup>

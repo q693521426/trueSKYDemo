@@ -1,8 +1,12 @@
 enum IDC_UI_ID
 {
-	IDC_SKY_FRAME_START						,
+	IDC_SKY_FRAMER_START					,
+	
+	IDC_SKY_TIME							,
+	
+	IDC_ANIMATION_TIME_STEP					,
 
-	IDC_SKY_DAYTIME 						,
+	IDC_SKY_FRAME_START						,
 
 	IDC_SKY_MIE 							,
 	IDC_SKY_HAZE 							,
@@ -138,7 +142,8 @@ enum IDC_UI_ID
 	IDC_TRUESKY_PROFILE						,
 	IDC_LOAD_CLOUD2D						,
 	IDC_LOAD_CLOUD							,
-	IDC_LOAD_SKY			
+	IDC_LOAD_SKY							,
+	IDC_LOAD_ANIMATION						
 };
 
 const int IDC_STATIC_OFFSET		=		500;

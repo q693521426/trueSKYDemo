@@ -192,7 +192,7 @@ RaytracePixelOutput RaytraceCloudsForward(Texture3D cloudDensity
 		float fade					=1.0-(fade_inter);
 		float fadeDistance			=saturate(distanceKm/maxFadeDistanceKm);
 
-		fade *= smoothstep(0.f,1.f,distanceKm);
+		fade *= smoothstep(0.f,1.f,distanceKm/10);
 		//fade *=saturate(exp(distanceKm)-1.f);
 
 		// maxDistance is the furthest we can *see*.

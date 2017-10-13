@@ -191,6 +191,12 @@
     <None Include="Shader\Sphere.hlsl">
       <Filter>Shader</Filter>
     </None>
+    <None Include="Resource\blue_casual_sky_01.sq">
+      <Filter>Resource</Filter>
+    </None>
+    <None Include="Resource\blue_casual_sky_02.sq">
+      <Filter>Resource</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Resource\directx.ico">
