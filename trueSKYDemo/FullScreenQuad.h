@@ -1,6 +1,6 @@
 #pragma once
 #include "ModelConstants.h"
-__declspec(align(16)) class FullScreenQuad
+class FullScreenQuad
 {
 public:
 	FullScreenQuad();
@@ -11,15 +11,6 @@ public:
 	HRESULT OnD3D11CreateDevice(ID3D11Device*, ID3D11DeviceContext*);
 	void Render(ID3D11RenderTargetView*, ID3D11ShaderResourceView*);
 
-	//void* operator new(size_t i)
-	//{
-	//	return _mm_malloc(i, 16);
-	//}
-
-	//void operator delete(void* p)
-	//{
-	//	_mm_free(p);
-	//}
 private:
 	D3DXMATRIX						m_World;
 	D3DXMATRIX						m_WVP;

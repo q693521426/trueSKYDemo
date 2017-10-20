@@ -23,8 +23,8 @@ public:
 	void Resize(const DXGI_SURFACE_DESC*);
 
 	void SetWVP(const D3DXMATRIX&);
-	void SetViewPos(const D3DXVECTOR4&);
-	void SetLight(const LightBuffer*);
+	void SetViewPos(const D3DXVECTOR3&);
+	void SetLight(const DirectionalLight*);
 
 	void SetModelHeight(float h);
 	//void* operator new(size_t i)
@@ -41,7 +41,7 @@ private:
 	float							ModelScaling;
 	D3DXMATRIX						m_World;
 	D3DXMATRIX						m_WVP;
-	D3DXVECTOR4						m_ViewPos;
+	D3DXVECTOR3						m_ViewPos;
 	const static DWORD				NUMBER_OF_MODELS = 1;
 	ID3D11VertexShader*				m_pVertexShader;
 	ID3D11PixelShader*				m_pPixelShader;
@@ -55,7 +55,7 @@ private:
 	Sphere*							m_LightSphere;
 	FBX_LOADER::CFBXRenderDX11*		m_pFbxDX11[NUMBER_OF_MODELS];
 	char*							m_files[NUMBER_OF_MODELS];
-	LightBuffer						m_Light;
+	DirectionalLight				m_DirectionalLight;
 
 };
 

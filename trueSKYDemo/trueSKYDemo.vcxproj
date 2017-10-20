@@ -390,7 +390,6 @@
     <ClCompile Include="FullScreenQuad.cpp" />
     <ClCompile Include="MicroProfile\microprofile.cpp" />
     <ClCompile Include="Model.cpp" />
-    <ClCompile Include="ModelConstants.cpp" />
     <ClCompile Include="RenderStates.cpp" />
     <ClCompile Include="Sphere.cpp" />
     <ClCompile Include="TrueSKYRender.cpp" />
@@ -437,6 +436,7 @@
     <None Include="Resource\basic_setting_plus_windspeed.sq" />
     <None Include="Resource\blue_casual_sky_01.sq" />
     <None Include="Resource\blue_casual_sky_02.sq" />
+    <None Include="Resource\newsequence_03.sq" />
     <None Include="Resource\sulan2.fbx" />
     <None Include="Resource\trueSKY.aps" />
   </ItemGroup>

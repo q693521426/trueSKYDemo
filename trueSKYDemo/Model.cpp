@@ -12,7 +12,7 @@ Model::Model():
 	m_pTextureRV(nullptr),
 	m_pSamplerLinear(nullptr),
 	ModelHeight(2100.f),
-	ModelScaling(1000.f)
+	ModelScaling(10000.f)
 {
 }
 
@@ -86,7 +86,7 @@ HRESULT Model::OnD3D11CreateDevice(ID3D11Device* pd3dDevice, ID3D11DeviceContext
 		m_files[i] = nullptr;
 	}
 	ID3DBlob* pVSBlob = nullptr;
-	V_RETURN(CompileShader(L"Shader/LoadModel.hlsl", "VS", "vs_4_0", &pVSBlob));
+	V_RETURN(CompileShader(L"Shader/LoadModel.hlsl", "VS", "vs_5_0", &pVSBlob));
 
 	hr = pd3dDevice->CreateVertexShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), nullptr, &m_pVertexShader);
 	if (FAILED(hr))
@@ -112,7 +112,7 @@ HRESULT Model::OnD3D11CreateDevice(ID3D11Device* pd3dDevice, ID3D11DeviceContext
 		return hr;
 
 	ID3DBlob* pPSBlob = nullptr;
-	V_RETURN(CompileShader(L"Shader/LoadModel.hlsl","PS", "ps_4_0",&pPSBlob));
+	V_RETURN(CompileShader(L"Shader/LoadModel.hlsl","PS", "ps_5_0",&pPSBlob));
 
 	// Create the pixel shader
 	hr = pd3dDevice->CreatePixelShader(pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), nullptr, &m_pPixelShader);
@@ -129,7 +129,7 @@ HRESULT Model::OnD3D11CreateDevice(ID3D11Device* pd3dDevice, ID3D11DeviceContext
 	bd.ByteWidth = sizeof(CBChangesEveryFrame);
 	V_RETURN(pd3dDevice->CreateBuffer(&bd, nullptr, &m_pCBChangesEveryFrame));
 
-	bd.ByteWidth = sizeof(LightBuffer);
+	bd.ByteWidth = sizeof(DirectionalLight);
 	V_RETURN(pd3dDevice->CreateBuffer(&bd, nullptr, &m_pLightBuffer));
 
 	bd.ByteWidth = sizeof(FrustumBuffer);
@@ -165,13 +165,13 @@ void Model::Render(ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3dImmediateC
 		D3D11_MAPPED_SUBRESOURCE MappedResource;
 
 		V(pd3dImmediateContext->Map(m_pLightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource));
-		auto  LB = reinterpret_cast<LightBuffer*>(MappedResource.pData);
-		*LB = m_Light;
+		auto  LB = reinterpret_cast<DirectionalLight*>(MappedResource.pData);
+		*LB = m_DirectionalLight;
 		pd3dImmediateContext->Unmap(m_pLightBuffer, 0);
 
 		V(pd3dImmediateContext->Map(m_pFrustumBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource));
 		auto  FB = reinterpret_cast<FrustumBuffer*>(MappedResource.pData);
-		FB->ViewPos = m_ViewPos;
+		FB->ViewPos = D3DXVECTOR4(m_ViewPos,1.0f);
 		pd3dImmediateContext->Unmap(m_pFrustumBuffer, 0);
 
 		pd3dImmediateContext->PSSetConstantBuffers(2, 1, &m_pLightBuffer);
@@ -243,12 +243,12 @@ void Model::SetWVP(const D3DXMATRIX& wvp)
 }
 
 
-void Model::SetViewPos(const D3DXVECTOR4& viewPos)
+void Model::SetViewPos(const D3DXVECTOR3& viewPos)
 {
 	m_ViewPos = viewPos;
 }
 
-void Model::SetLight(const LightBuffer* l)
+void Model::SetLight(const DirectionalLight* l)
 {
-	m_Light = *l;
+	m_DirectionalLight = *l;
 }

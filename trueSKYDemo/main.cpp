@@ -8,9 +8,8 @@
 
 #include "Model.h" 
 #include "TrueSKYRender.h"
-#include "FullScreenQuad.h"
-#include "FrameBuffer.h"
 #include "UIContstants.h"
+#include "RenderStates.h"
 
 #include <map>
 #include <sstream>
@@ -24,7 +23,6 @@
 //--------------------------------------------------------------------------------------
 // UI control IDs
 //--------------------------------------------------------------------------------------
-
 CDXUTDialogResourceManager          g_DialogResourceManager;
 CD3DSettingsDlg                     g_D3DSettingsDlg;       // Device settings dialog
 CDXUTDialog							g_SkyParaUI;
@@ -32,10 +30,12 @@ CDXUTDialog                         g_CloudParaUI;
 CDXUTDialog                         g_Cloud2DParaUI; 
 CDXUTDialog                         g_SwitchUI; 
 
-
-const char							sqFile[]="./Resource/blue_casual_sky_02.sq";
+const char*							sqFileName[]={"./Resource/basic_setting_plus_windspeed.sq",
+												"./Resource/blue_casual_sky_02.sq",
+												"./Resource/newsequence_03.sq"};
+const char*							sqFile=sqFileName[1];
 float								m_EyeHeight = 13904.f;	// Unit:m 
-float								m_ModelScaling = 1000.f;	
+float								m_ModelScaling = 10000.f;	
 int									screen_width = 1280;
 int									screen_height = 720;
 D3DXMATRIX							g_World;
@@ -43,22 +43,16 @@ D3DXMATRIX							g_View;
 D3DXMATRIX							g_Projection;
 D3D11_VIEWPORT						g_viewport;
 CFirstPersonCamera					mCamera;
-D3DXVECTOR3							s_Eye( 10*m_ModelScaling, m_EyeHeight, 20*m_ModelScaling );
-D3DXVECTOR3							s_At( 0.0f, m_EyeHeight, 20*m_ModelScaling );
-D3DXVECTOR3							s_Up( 0.0f, 0.0f, 1.0f );
+D3DXVECTOR3							g_Eye( 10*m_ModelScaling, m_EyeHeight, 20*m_ModelScaling );
+D3DXVECTOR3							g_At( 0.0f, m_EyeHeight, 20*m_ModelScaling );
 ID3D11Device*						g_pd3dDevice = nullptr;
 ID3D11DeviceContext*				g_pd3dImmediateContext = nullptr;
 ID3D11RenderTargetView*				g_pRenderTargetView = nullptr;
 ID3D11DepthStencilView*				g_pDepthStencilView = nullptr;
-ID3D11RasterizerState*				g_pBackCCWRS = nullptr;
-ID3D11RasterizerState*				g_pBackCWRS = nullptr;
-ID3D11DepthStencilState*			g_pOnDepthStencilState = nullptr;
-ID3D11DepthStencilState*			g_pOffDepthStencilState = nullptr;
 Model*								m_Model = nullptr;
 TrueSKYRender*						m_TrueSKYRender = nullptr;
 CameraSqFile*						m_CameraSqFile = nullptr;
-LightBuffer							g_Light;
-D3DXVECTOR4							viewPos;
+DirectionalLight					g_DirectionalLight;
 float								ClearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 bool								keydown[256];
 
@@ -69,7 +63,7 @@ bool								IsProfile = false;
 bool								IsCloud2D = true;
 bool								IsCloud = true;
 bool								IsSky = true;
-bool								IsAnimation = true;
+bool								IsAnimation = false;
 
 simul::sky::SkyKeyframer*			g_SkyKeyFramer = nullptr;
 simul::clouds::CloudKeyframer*		g_CloudKeyFramer = nullptr;
@@ -123,64 +117,24 @@ HRESULT CALLBACK OnD3D11CreateDevice(ID3D11Device* pd3dDevice, const DXGI_SURFAC
 
 	V_RETURN( g_DialogResourceManager.OnD3D11CreateDevice( pd3dDevice, g_pd3dImmediateContext ) );
 	V_RETURN( g_D3DSettingsDlg.OnD3D11CreateDevice( pd3dDevice ) );
+	
+	V_RETURN(RenderStates::Initialize(pd3dDevice));
 
-	D3D11_RASTERIZER_DESC rasterDesc;
-	rasterDesc.AntialiasedLineEnable = false;
-	rasterDesc.CullMode = D3D11_CULL_BACK;
-	rasterDesc.DepthBias = 0;
-	rasterDesc.DepthBiasClamp = 0.0f;
-	rasterDesc.DepthClipEnable = true;
-	rasterDesc.FillMode = D3D11_FILL_SOLID;
-	rasterDesc.FrontCounterClockwise = true;
-	rasterDesc.MultisampleEnable = false;
-	rasterDesc.ScissorEnable = false;
-	rasterDesc.SlopeScaledDepthBias = 0.0f;
-	g_pd3dDevice->CreateRasterizerState(&rasterDesc, &g_pBackCCWRS);
-
-	rasterDesc.FrontCounterClockwise = false;
-	g_pd3dDevice->CreateRasterizerState(&rasterDesc, &g_pBackCWRS);
-
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
-	depthStencilDesc.DepthEnable = true;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
-	depthStencilDesc.StencilEnable = true;
-	depthStencilDesc.StencilReadMask = 0xff;
-	depthStencilDesc.StencilWriteMask = 0xff;
-
-	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	V_RETURN(g_pd3dDevice->CreateDepthStencilState(&depthStencilDesc, &g_pOnDepthStencilState));
-
-	depthStencilDesc.DepthEnable = false;
-	V_RETURN(g_pd3dDevice->CreateDepthStencilState(&depthStencilDesc, &g_pOffDepthStencilState));
-
-//Load Camera Info From Sq File.
-//First Do.
 #if TRUESKY
 	m_TrueSKYRender = new TrueSKYRender;
 	if(IsLoadSq)
 	{
+		//Load Camera Info From Sq File.
 		LoadCamera();
 		m_TrueSKYRender->Initialize(sqFile);
 	}
 	else
 		m_TrueSKYRender->Initialize();
 	V_RETURN(m_TrueSKYRender->OnD3D11CreateDevice(g_pd3dDevice, g_pd3dImmediateContext));
-
 	InitKeyFrameAttr();
 #endif
 	D3DXMatrixIdentity(&g_World);
-	mCamera.SetViewParams(&s_Eye, &s_At);
+	mCamera.SetViewParams(&g_Eye, &g_At);
 	g_View = *(mCamera.GetViewMatrix());
 
 	g_viewport.Width = static_cast<float>(screen_width);
@@ -306,33 +260,13 @@ void CALLBACK OnD3D11FrameRender(ID3D11Device* pd3dDevice, ID3D11DeviceContext* 
 	auto pDSV = DXUTGetD3D11DepthStencilView();
 	pd3dImmediateContext->ClearRenderTargetView(pRTV, ClearColor);
 	pd3dImmediateContext->ClearDepthStencilView( pDSV, D3D11_CLEAR_DEPTH, 1.0f, 0 );
-	pd3dImmediateContext->OMSetDepthStencilState(g_pOnDepthStencilState, 1);
+	pd3dImmediateContext->OMSetDepthStencilState(RenderStates::OnDepthStencilState, 1);
 
 	UpdateMatrix();
 
 #if TRUESKY
-	D3DXMATRIX change(	-1.f, 0.f, 0.f, 0.f,
-		0.f, 0.f, -1.f, 0.f,
-		0.f, -1.f, 0.f, 0.f,
-		0.f, 0.f, 0.f, 1.f);
-
-	D3DXMATRIX rotateZ;
-	D3DXMatrixRotationZ(&rotateZ,D3DX_PI);
-
-	D3DXMATRIX view =  g_View;
-
-	view = change * view * rotateZ;
-
-	D3DXVECTOR3 eye = *(mCamera.GetEyePt());
-	D3DXMATRIX trans(	1.f, 0.f, 0.f, 0.f,
-		0.f, 1.f, 0.f, 0.f,
-		0.f, 0.f, 1.f, 0.f,
-		-eye.x , -eye.z , -eye.y , 1.f);
-	for(int i=0;i<3;i++)
-		view.m[3][i]=0;
-	view = trans * view;
-
-	m_TrueSKYRender->SetView(view);
+	m_TrueSKYRender->SetViewPos(g_Eye);
+	m_TrueSKYRender->SetView(g_View);
 	m_TrueSKYRender->SetPro(g_Projection);
 	{
 #if MICROPROFILE
@@ -341,8 +275,8 @@ void CALLBACK OnD3D11FrameRender(ID3D11Device* pd3dDevice, ID3D11DeviceContext* 
 #endif
 		m_TrueSKYRender->PreRender(0, pd3dDevice, pd3dImmediateContext,
 			IsProfile,IsCloud2D,IsCloud,IsSky,IsAnimation);
+		//g_DirectionalLight.Direction = D3DXVECTOR3(m_TrueSKYRender->GetLightDir())
 	}
-	//g_Light.LightPos = m_TrueSKYRender->GetDirToSun();
 #endif
 #if LOAD_MODEL
 	if(IsLoadModel)
@@ -352,13 +286,12 @@ void CALLBACK OnD3D11FrameRender(ID3D11Device* pd3dDevice, ID3D11DeviceContext* 
 		MICROPROFILE_SCOPEI("Main","Render Model", 0xff00ff);
 #endif
 		//counter-clockwise
-		pd3dImmediateContext->OMSetDepthStencilState(g_pOnDepthStencilState, 1);
-		pd3dImmediateContext->RSSetState(g_pBackCCWRS);
+		pd3dImmediateContext->RSSetState(RenderStates::CullClockWiseRS);
 		m_Model->SetWVP(g_World*g_View*g_Projection);
-		m_Model->SetViewPos(viewPos);
-		m_Model->SetLight(&g_Light);
+		m_Model->SetViewPos(g_Eye);
+		m_Model->SetLight(&g_DirectionalLight);
 		m_Model->Render(pd3dDevice, pd3dImmediateContext);
-		pd3dImmediateContext->RSSetState(g_pBackCWRS);
+		pd3dImmediateContext->RSSetState(RenderStates::CullCounterClockWiseRS);
 	}
 #endif //LOAD_MODEL
 #if TRUESKY
@@ -367,9 +300,7 @@ void CALLBACK OnD3D11FrameRender(ID3D11Device* pd3dDevice, ID3D11DeviceContext* 
 		MICROPROFILE_SCOPEGPUI("Render TrueSKY", 0xffff00);
 		MICROPROFILE_SCOPEI("Main","Render TrueSKY", 0xffff00);
 #endif
-		pd3dImmediateContext->OMSetDepthStencilState(g_pOffDepthStencilState, 1);
 		m_TrueSKYRender->Render(IsTrueSKY,IsProfile);
-		pd3dImmediateContext->OMSetDepthStencilState(g_pOnDepthStencilState, 1);
 	}
 #endif //TRUESKY
 	DXUT_BeginPerfEvent( DXUT_PERFEVENTCOLOR, L"HUD / Stats" );
@@ -406,10 +337,8 @@ void CALLBACK OnD3D11DestroyDevice(void* pUserContext)
 	g_DialogResourceManager.OnD3D11DestroyDevice();
 	g_D3DSettingsDlg.OnD3D11DestroyDevice();
 	DXUTGetGlobalResourceCache().OnDestroyDevice();
-	SAFE_RELEASE(g_pBackCCWRS);
-	SAFE_RELEASE(g_pBackCWRS);
-	SAFE_RELEASE(g_pOnDepthStencilState);
-	SAFE_RELEASE(g_pOffDepthStencilState);
+
+	RenderStates::Release();
 	g_SkyKeyFramer = nullptr;
 	g_CloudKeyFramer = nullptr;
 	g_Cloud2DKeyFramer = nullptr;
@@ -417,23 +346,19 @@ void CALLBACK OnD3D11DestroyDevice(void* pUserContext)
 	g_CloudKeyFrame = nullptr;
 	g_Cloud2DKeyFrame = nullptr;
 
-#if TRUESKY
 	if(m_TrueSKYRender)
 	{
 		m_TrueSKYRender->Release();
 		delete m_TrueSKYRender;
 		m_TrueSKYRender = nullptr;
 	}
-#endif
 
-#if LOAD_MODEL
 	if(m_Model)
 	{
 		m_Model->Release();
 		delete m_Model;
 		m_Model = nullptr;
 	}
-#endif
 #if MICROPROFILE
 	MicroProfileShutdown();
 #endif
@@ -566,14 +491,6 @@ void CALLBACK OnGUIEvent( UINT nEvent, int nControlID, CDXUTControl* pControl, v
 		{
 			IsAnimation=IsAnimation?false:true;
 			break;
-		}
-	case IDC_ANIMATION_TIME_STEP:
-		{
-			CDXUTDialog	*dialog = &g_SkyParaUI;
-			int val = dialog->GetSlider( nControlID )->GetValue();
-#if TRUESKY
-			m_TrueSKYRender->SetAnimationTimeStep(val);
-#endif
 		}
 	default:
 		{
@@ -726,14 +643,10 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
 	memset(keydown,0,sizeof(keydown));
 
-	g_Light.LightPos = D3DXVECTOR4(10.0f, 3.0f, 1.0f, 1.0f);
-	g_Light.LightColor = D3DXVECTOR4(1.0f, 1.0f, 1.0f, 1.0f);
-	g_Light.Ambient = D3DXVECTOR4(0.05f, 0.05f, 0.05f, 1.0f);
-	g_Light.Diffuse = D3DXVECTOR4(0.70f, 0.70f, 0.70f, 1.0f);
-	g_Light.Specular = D3DXVECTOR4(0.70f, 0.70f, 0.70f, 0.70f);
-	g_Light.Constant = 1.0f;
-	g_Light.Linear = 0.009f;
-	g_Light.Quadratic = 0.0032f;
+	g_DirectionalLight.Direction = D3DXVECTOR3(-10.0f, -3.0f, -1.0f);
+	g_DirectionalLight.Ambient = D3DXVECTOR4(0.05f, 0.05f, 0.05f, 1.0f);
+	g_DirectionalLight.Diffuse = D3DXVECTOR4(0.70f, 0.70f, 0.70f, 1.0f);
+	g_DirectionalLight.Specular = D3DXVECTOR4(0.70f, 0.70f, 0.70f, 0.70f);
 
 	// Set general DXUT callbacks
 	DXUTSetCallbackFrameMove(OnFrameMove);
@@ -774,9 +687,7 @@ void UpdateMatrix()
 	D3DXMatrixIdentity(&g_World);
 	g_View = *(mCamera.GetViewMatrix());
 	g_Projection = *(mCamera.GetProjMatrix());
-	s_Eye = *(mCamera.GetEyePt());
-	viewPos = D3DXVECTOR4(s_Eye);
-	viewPos.w = 1.0f;
+	g_Eye = *(mCamera.GetEyePt());
 }
 
 void InitApp()
@@ -792,7 +703,7 @@ void InitApp()
 	UIAttrUsedMap.emplace(IDC_SKY_TIME,
 		UIAttr("Time",0,24,24,0.f,1.f));
 	UIAttrUsedMap.emplace(IDC_ANIMATION_TIME_STEP,
-		UIAttr("AnimationTimeStep",1,100,1,0.f,1.f));
+		UIAttr("AnimationTimeStep",1,1000,1,0.f,1.f));
 
 	UIAttrUsedMap.emplace(IDC_CLOUD_FRAME_START,UIAttr());
 	UIAttrUsedMap.emplace(IDC_CLOUD_CLOUDINESS,
@@ -809,7 +720,7 @@ void InitApp()
 		-100,100,100,0.f,1.f));
 	UIAttrUsedMap.emplace(IDC_CLOUD_WIND_SPEED,
 		UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::windSpeed],
-		-2000,2000,2000,FLT_MIN,FLT_MAX));
+		-20000,20000,100,FLT_MIN,FLT_MAX));
 	UIAttrUsedMap.emplace(IDC_CLOUD_BASE_KM,
 		UIAttr(TrueSKYRender::cloudFrameFloatAttrName[CloudFrameFloatAttr::cloudBase],
 		-2000,2000,2000,FLT_MIN,FLT_MAX));
@@ -1024,24 +935,24 @@ void LoadCamera()
 
 		D3DXMATRIX rotateZ;
 		D3DXMatrixRotationZ(&rotateZ,D3DX_PI);
-		s_Eye=m_CameraSqFile->PosKm;
-		s_Eye*=1000;
+		g_Eye=m_CameraSqFile->PosKm;
+		g_Eye*=1000;
 		D3DXVECTOR4 out;
-		D3DXVec3Transform(&out,&s_Eye,&change);
+		D3DXVec3Transform(&out,&g_Eye,&change);
 		D3DXVec4Transform(&out,&out,&rotateZ);
-		s_Eye=D3DXVECTOR3(out);
-		m_EyeHeight= s_Eye.y;
+		g_Eye=D3DXVECTOR3(out);
+		m_EyeHeight= g_Eye.y;
 
-		s_Eye=D3DXVECTOR3(10*m_ModelScaling,m_EyeHeight,20*m_ModelScaling);
-		s_At= D3DXVECTOR3(0.f,m_EyeHeight,20*m_ModelScaling);
+		g_Eye=D3DXVECTOR3(10*m_ModelScaling,m_EyeHeight,20*m_ModelScaling);
+		g_At= D3DXVECTOR3(0.f,m_EyeHeight,20*m_ModelScaling);
 
-		//D3DXVECTOR3 look = s_At - s_Eye;
+		//D3DXVECTOR3 look = g_At - g_Eye;
 		//D3DXQUATERNION q(m_CameraSqFile->Quaternion[1],m_CameraSqFile->Quaternion[2],m_CameraSqFile->Quaternion[3],m_CameraSqFile->Quaternion[0]);
 		//D3DXMATRIX q_matrix;
 		//D3DXMatrixRotationQuaternion(&q_matrix,&q);
 		//D3DXVec3Transform(&out,&look,&q_matrix);
 
-		//s_At = s_Eye + D3DXVECTOR3(out);
+		//g_At = g_Eye + D3DXVECTOR3(out);
 	}
 	fin.close();
 }

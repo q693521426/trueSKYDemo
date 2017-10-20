@@ -7,8 +7,6 @@ FrameBuffer::FrameBuffer(void):
 	m_pFrameRenderTargetView(nullptr),
 	m_pFrameShaderResourceView(nullptr),
 	m_pDepthStencilView(nullptr),
-	m_pOnDepthStencilState(nullptr),
-	m_pOffDepthStencilState(nullptr),
 	m_pDepthStencilBuffer(nullptr),
 	m_pDepthSRV(nullptr),
 	m_pBlendState(nullptr),
@@ -38,8 +36,6 @@ void FrameBuffer::Release()
 	SAFE_RELEASE(m_pFrameRenderTargetView);
 	SAFE_RELEASE(m_pFrameShaderResourceView);
 	SAFE_RELEASE(m_pDepthStencilView);
-	SAFE_RELEASE(m_pOnDepthStencilState);
-	SAFE_RELEASE(m_pOffDepthStencilState);
 	SAFE_RELEASE(m_pDepthStencilBuffer);
 	SAFE_RELEASE(m_pDepthSRV);
 	SAFE_RELEASE(m_pBlendState);
@@ -163,32 +159,6 @@ HRESULT FrameBuffer::OnD3D11CreateDevice(ID3D11Device* pd3dDevice, ID3D11DeviceC
 	m_pd3dDevice = pd3dDevice;
 	m_pd3dImmediateContext = pd3dImmediateContext;
 
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
-	depthStencilDesc.DepthEnable = true;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
-	depthStencilDesc.StencilEnable = true;
-	depthStencilDesc.StencilReadMask = 0xff;
-	depthStencilDesc.StencilWriteMask = 0xff;
-
-	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-	//depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-	//depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	V_RETURN(pd3dDevice->CreateDepthStencilState(&depthStencilDesc, &m_pOnDepthStencilState));
-
-	depthStencilDesc.DepthEnable = false;
-	V_RETURN(pd3dDevice->CreateDepthStencilState(&depthStencilDesc, &m_pOffDepthStencilState));
-
 	V_RETURN(UpdateFormat());
 	V_RETURN(UpdateDepthFormat());
 
@@ -220,7 +190,6 @@ void FrameBuffer::Activate(bool clear)
 		ClearRTV(ClearColor);
 		ClearDepth(1.f);
 	}
-	m_pd3dImmediateContext->OMSetDepthStencilState(m_pOnDepthStencilState,1);
 	m_pd3dImmediateContext->OMSetRenderTargets(1,&m_pFrameRenderTargetView,m_pDepthStencilView);
 	m_pd3dImmediateContext->RSSetViewports(1,&m_viewport);
 }
@@ -231,17 +200,13 @@ void FrameBuffer::Deactivate()
 
 void FrameBuffer::DeactivateDepth()
 {
-	//m_pd3dImmediateContext->OMSetDepthStencilState(m_pOffDepthStencilState,1);
+	//m_pd3dImmediateContext->OMSetDepthStencilState(RenderStates::OffDepthStencilState,1);
 	m_pd3dImmediateContext->OMSetRenderTargets(1,&m_pFrameRenderTargetView,nullptr);
 }
 
 void FrameBuffer::ActivateDepth(bool clear)
 {
-	m_pd3dImmediateContext->OMSetDepthStencilState(m_pOnDepthStencilState,1);
-	m_pd3dImmediateContext->OMSetRenderTargets(1,&m_pFrameRenderTargetView,m_pDepthStencilView);
-	m_pd3dImmediateContext->RSSetViewports(1,&m_viewport);
-	if(clear)
-		ClearDepth(1.f);
+	m_pd3dImmediateContext->OMSetDepthStencilState(RenderStates::OnDepthStencilState,1);
 }
 
 ID3D11Texture2D* FrameBuffer::GetDepthResource()

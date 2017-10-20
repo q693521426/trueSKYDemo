@@ -145,9 +145,6 @@
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="ModelConstants.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="FrameBuffer.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -182,9 +179,6 @@
     <None Include="Resource\trueSKY.aps">
       <Filter>Resource</Filter>
     </None>
-    <None Include="Shader\LoadModel.hlsl">
-      <Filter>Shader</Filter>
-    </None>
     <None Include="Shader\Quad.hlsl">
       <Filter>Shader</Filter>
     </None>
@@ -195,6 +189,12 @@
       <Filter>Resource</Filter>
     </None>
     <None Include="Resource\blue_casual_sky_02.sq">
+      <Filter>Resource</Filter>
+    </None>
+    <None Include="Shader\LoadModel.hlsl">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="Resource\newsequence_03.sq">
       <Filter>Resource</Filter>
     </None>
   </ItemGroup>

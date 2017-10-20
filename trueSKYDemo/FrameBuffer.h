@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include "RenderStates.h"
 
 __declspec(align(16)) class FrameBuffer
 {
@@ -55,8 +56,6 @@ private:
 	ID3D11RenderTargetView*							m_pFrameRenderTargetView;
 	ID3D11ShaderResourceView*						m_pFrameShaderResourceView;
 	ID3D11DepthStencilView*							m_pDepthStencilView;
-	ID3D11DepthStencilState*						m_pOnDepthStencilState;
-	ID3D11DepthStencilState*						m_pOffDepthStencilState;
 	ID3D11Texture2D*								m_pDepthStencilBuffer;
 	ID3D11ShaderResourceView*						m_pDepthSRV;
 	ID3D11BlendState*								m_pBlendState;

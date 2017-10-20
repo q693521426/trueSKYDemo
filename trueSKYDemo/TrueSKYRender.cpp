@@ -82,8 +82,7 @@ TrueSKYRender::TrueSKYRender():
 	m_pRenderTargetView(nullptr),
 	m_pDenthStencilView(nullptr),
 	m_pViewPort(nullptr),
-	frame_number(0),
-	frame_refresh(60),
+	time_refresh(0.1f),
 	time_step(10)
 {
 }
@@ -154,7 +153,6 @@ bool TrueSKYRender::ReLoadSq(const char* sq)
 
 	weatherRenderer->RestoreDeviceObjects(&renderPlatformDx11);
 
-	frame_number=0;
 	return true;
 }
 
@@ -296,7 +294,7 @@ HRESULT TrueSKYRender::OnD3D11CreateDevice(ID3D11Device* pd3dDevice, ID3D11Devic
 	return hr;
 }
 
-void TrueSKYRender::IsRender(bool Is2DCloud,bool IsCloud,bool IsSky,bool IsAnimation)
+void TrueSKYRender::IsRender(bool Is2DCloud,bool IsCloud,bool IsSky)
 {
 	//skyKeyFramer->ClearKeyframes();
 	if(Is2DCloud)
@@ -331,19 +329,6 @@ void TrueSKYRender::IsRender(bool Is2DCloud,bool IsCloud,bool IsSky,bool IsAnima
 		if(cloudKeyFramer->GetNumKeyframes()>0)
 			cloudKeyFramer->ClearKeyframes();
 	}
-	frame_number++;
-	if(frame_number>=frame_refresh)
-	{
-		frame_number=0;
-		if(IsAnimation)
-		{
-			skyKeyFramer->GetNextModifiableKeyframe();
-			skyKeyFramer->GetInterpolatedKeyframe()->daytime += 1.f/24/600*time_step;
-			if(skyKeyFramer->GetInterpolatedKeyframe()->daytime>=1.f)
-				skyKeyFramer->GetInterpolatedKeyframe()->daytime-=1.0f;
-			skyKeyFramer->Update();
-		}
-	}
 }
 
 void TrueSKYRender::PreRender(int view_id, ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3dImmediateContext,
@@ -375,20 +360,24 @@ void TrueSKYRender::PreRender(int view_id, ID3D11Device* pd3dDevice, ID3D11Devic
 	// MUST call this after modifying a deviceContext.
 	deviceContext.viewStruct.Init();
 
-#if SIMUL_HDR
-	hdrFramebuffer->Activate(deviceContext);
-	hdrFramebuffer->ActivateDepth(deviceContext);
-	hdrFramebuffer->Clear(deviceContext, 0.f, 0.f, 0.f, 0.f, reverseDepth ? 0.f : 1.f);
-#else
-	m_FrameBuffer->Activate();
-	m_FrameBuffer->ActivateDepth(true);
-#endif
-
-	IsRender(Is2DCloud,IsCloud,IsSky,IsAnimation);
 	env->Update();
 	
+	IsRender(Is2DCloud,IsCloud,IsSky);
+
 	static simul::base::Timer timer;
+	static float old_time = timer.UpdateTimeSum() / 1000.0f; 
 	float real_time = timer.UpdateTimeSum() / 1000.0f;
+	
+	if(IsAnimation)
+	{
+		skyKeyFramer->GetNextModifiableKeyframe();
+		skyKeyFramer->GetInterpolatedKeyframe()->daytime += (real_time - old_time) * time_step / 24.0f / 3600.0f;
+		if(skyKeyFramer->GetInterpolatedKeyframe()->daytime>=1.f)
+			skyKeyFramer->GetInterpolatedKeyframe()->daytime-=1.0f;
+		skyKeyFramer->Update();
+	}
+	old_time = real_time;
+
 	{
 #if MICROPROFILE
 		MICROPROFILE_SCOPEI("TrueSKY PreRender","BaseWeather PreRender Update",0x00ffff);
@@ -400,9 +389,12 @@ void TrueSKYRender::PreRender(int view_id, ID3D11Device* pd3dDevice, ID3D11Devic
 		weatherRenderer->PreRenderUpdate(deviceContext, real_time);
 	}
 #if SIMUL_HDR
+	hdrFramebuffer->Activate(deviceContext);
 	hdrFramebuffer->ActivateDepth(deviceContext);
+	hdrFramebuffer->Clear(deviceContext, 0.f, 0.f, 0.f, 0.f, reverseDepth ? 0.f : 1.f);
 #else
-	m_FrameBuffer->ActivateDepth();
+	m_FrameBuffer->Activate();
+	m_FrameBuffer->ActivateDepth(true);
 #endif
 }
 
@@ -550,7 +542,7 @@ void TrueSKYRender::OnMouse(bool bLeftButtonDown
 		mouseCameraInput.MouseY=yPos;
 }
 
-void TrueSKYRender::OnFrameMove(double fTime,float time_step,bool* keydown)
+void TrueSKYRender::OnFrameMove(double fTime,float fElapsedTime,bool* keydown)
 {
 #if SIMUL_CAMERA
 	mouseCameraInput.forward_back_input	=(float)keydown['w']-(float)keydown['s'];
@@ -564,8 +556,6 @@ void TrueSKYRender::OnFrameMove(double fTime,float time_step,bool* keydown)
 							,mouseCameraInput
 							,10000.f);
 #endif
-
-
 }
 
 #pragma region Ser & Get
@@ -674,9 +664,26 @@ void TrueSKYRender::SetWorld(const D3DXMATRIX& world)
 	m_World = world;
 }
 
+//should call SetviewPos() before
 void TrueSKYRender::SetView(const D3DXMATRIX& view)
 {
-	m_View = view;
+	D3DXMATRIX change(	-1.f, 0.f, 0.f, 0.f,
+		0.f, 0.f, -1.f, 0.f,
+		0.f, -1.f, 0.f, 0.f,
+		0.f, 0.f, 0.f, 1.f);
+
+	D3DXMATRIX rotateZ;
+	D3DXMatrixRotationZ(&rotateZ,D3DX_PI);
+
+	m_View = change * view * rotateZ;
+
+	D3DXMATRIX trans(	1.f, 0.f, 0.f, 0.f,
+		0.f, 1.f, 0.f, 0.f,
+		0.f, 0.f, 1.f, 0.f,
+		-m_ViewPos.x , -m_ViewPos.y , -m_ViewPos.z , 1.f);
+	for(int i=0;i<3;i++)
+		m_View.m[3][i]=0;
+	m_View = trans * m_View;
 }
 
 void TrueSKYRender::SetPro(const D3DXMATRIX& pro)
@@ -686,13 +693,19 @@ void TrueSKYRender::SetPro(const D3DXMATRIX& pro)
 	m_Projection._34 = -m_Projection._34;
 }
 
-void TrueSKYRender::SetViewPos(const D3DXVECTOR4& viewPos)
+void TrueSKYRender::SetViewPos(const D3DXVECTOR3& viewPos)
 {
-	m_ViewPos = viewPos;
+	m_ViewPos = D3DXVECTOR3(viewPos.x,viewPos.z,viewPos.y);
 }
 
 void TrueSKYRender::SetAnimationTimeStep(const int t)
 {
 	time_step = t;
+}
+
+D3DXVECTOR3 TrueSKYRender::GetLightDir()
+{
+	//skyKeyFramer->GetInterpolatedKeyframe()->
+	return D3DXVECTOR3();
 }
 #pragma endregion

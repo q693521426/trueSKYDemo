@@ -66,12 +66,11 @@ public:
 	HRESULT OnD3D11CreateDevice(ID3D11Device*, ID3D11DeviceContext*);
 	void PreRender(int, ID3D11Device*, ID3D11DeviceContext*,
 		bool IsProfile = false,bool Is2DCloud = true,
-		bool IsCloud = true,bool IsSky = true,
-		bool IsAnimation = true);
+		bool IsCloud = true,bool IsSky = true,bool IsAnimation = true);
 	void Render(bool IsTrueSky = true,bool IsProfile = false);
 	void Resize(ID3D11RenderTargetView*,ID3D11DepthStencilView*	,D3D11_VIEWPORT*,const DXGI_SURFACE_DESC*);
 	void RecompileShaders();
-	void OnFrameMove(double fTime,float time_step,bool* keydown);
+	void OnFrameMove(double fTime,float fElapsedTime,bool* keydown);
 	bool MsgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 	void OnMouse(bool,bool,bool,int,int,int );
 	bool InitEnv(const char* sq = nullptr);
@@ -81,11 +80,11 @@ public:
 	void SetWorld(const D3DXMATRIX&);
 	void SetView(const D3DXMATRIX&);
 	void SetPro(const D3DXMATRIX&);
-	void SetViewPos(const D3DXVECTOR4&);
+	void SetViewPos(const D3DXVECTOR3&);
 
 	void SetAnimationTimeStep(const int);
 
-	void IsRender(bool,bool,bool,bool);
+	void IsRender(bool,bool,bool);
 
 	simul::sky::SkyKeyframe* GetSkyFrameAttr();
 	void UpdateSkyFrameFloatAttr(const char* name,float value,float min,float max);
@@ -105,6 +104,7 @@ public:
 	simul::clouds::CloudKeyframer* GetCloud2DFramerAttr();
 	void UpdateCloud2DFramerIntAttr(const char* name,int value,int min,int max);
 
+	D3DXVECTOR3 GetLightDir();
 	static int clamp(int i,int a,int b)
 	{
 		if(a == INT_MIN || b == INT_MAX)
@@ -135,11 +135,10 @@ private:
 	D3DXMATRIX						m_World;
 	D3DXMATRIX						m_View;
 	D3DXMATRIX						m_Projection;
-	D3DXVECTOR4						m_ViewPos;
+	D3DXVECTOR3						m_ViewPos;
 	
 	bool							reverseDepth;
-	int								frame_number;
-	int								frame_refresh;
+	double							time_refresh;
 	int								time_step;
 
 	simul::clouds::Environment*					env;
